@@ -1,0 +1,144 @@
+---
+title: "Stuff+ Foray"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Libraries, echo = FALSE, message = FALSE}
+options(scipen = 10)
+library(tidyverse)
+library(readxl)
+library(patchwork)
+```
+
+```{r Data, message = FALSE, warning = FALSE}
+stuff <- read_excel("Stuff Plus.xlsx", sheet = "Data")
+
+stuff_explore <- read_excel("Stuff Plus.xlsx", sheet = "Extended")
+```
+
+```{r, warning = FALSE, message = FALSE}
+stuff_explore %>% 
+  filter(IP > 81) %>% 
+  ggplot(aes(x = `Stuff+`, y = FIP, color = WAR)) +
+  geom_point(alpha = 0.7) + 
+  geom_smooth(method = lm, se = FALSE) +
+  scale_color_gradient(low = "gold", high = "red") +
+  theme_dark() +
+    NULL
+
+
+stuff_explore %>% 
+  filter(IP > 81) %>% 
+  ggplot(aes(x = `Stuff+`, y = WAR/IP)) +
+  geom_point(alpha = 0.7) + 
+  geom_smooth(method = lm, se = FALSE) +
+  theme_classic() +
+    NULL
+```
+
+```{r Cor}
+correl <- stuff_explore %>% 
+  select(-Name, -Season, -Team) %>% 
+  cor()
+
+correl <- correl[,2]
+
+correl <- correl %>% 
+  as.data.frame() %>% 
+  rename("cor" = ".")
+
+correl <- correl %>% 
+  arrange(by = desc(cor))
+
+correl <- correl %>% 
+  filter(cor > -1)
+
+correl %>% 
+  filter(cor < 1) %>% 
+  kable()
+
+correl %>%
+  filter(cor < 1) %>% 
+  abs() %>% 
+  arrange(desc(cor)) %>% 
+  kable()
+```
+
+```{r, message = FALSE, warning = FALSE}
+# Josh Fleming 2020 was removed because his Stf+ FA was -144 when all other
+# observations were between 18 and 185.
+
+cor1 <- stuff %>% 
+  filter(!is.na(`Stf+ FA`) & !is.na(`Stuff+`)) %>%
+  filter(`Stf+ FA` > 0) %>% 
+  with(cor(`Stf+ FA`,`Stuff+`))
+
+g_FA <- stuff %>% 
+  filter(`Stf+ FA` > 0) %>% 
+  ggplot() + 
+  geom_abline(intercept = 0, slope = 1, color = "green", alpha = 0.4, size = 2) +
+  geom_point(aes(x = `Stf+ FA`, y = `Stuff+`), alpha = 0.5) +
+  labs(caption = paste("Correlation =", round(cor1, 3)),
+       x = "Stuff+ Fastball") +
+  xlim(0, 200) + ylim(60, 160) +
+  geom_smooth(aes(x = `Stf+ FA`, y = `Stuff+`), method = lm, se = FALSE, color = "blue")
+
+###################
+
+cor2 <- stuff %>% 
+  filter(!is.na(`Stf+ SL`) & !is.na(`Stuff+`)) %>%
+  filter(`Stf+ SL` > 0) %>% 
+  with(cor(`Stf+ SL`,`Stuff+`))
+
+g_SL <- stuff %>% 
+  filter(`Stf+ SL` > 0) %>% 
+  ggplot() + 
+  geom_abline(intercept = 0, slope = 1, color = "green", alpha = 0.4, size = 2) +
+  geom_point(aes(x = `Stf+ SL`, y = `Stuff+`), alpha = 0.5) +
+  labs(caption = paste("Correlation =", round(cor2, 3)),
+       x = "Stuff+ Slider") +
+  xlim(0, 200) + ylim(60, 160) +
+  geom_smooth(aes(x = `Stf+ SL`, y = `Stuff+`), method = lm, se = FALSE, color = "blue")
+
+############
+
+cor3 <- stuff %>% 
+  filter(!is.na(`Stf+ CU`) & !is.na(`Stuff+`)) %>%
+  filter(`Stf+ CU` > 0) %>% 
+  with(cor(`Stf+ CU`,`Stuff+`))
+
+g_CU <- stuff %>% 
+  filter(`Stf+ CU` > 0) %>% 
+  ggplot() + 
+  geom_abline(intercept = 0, slope = 1, color = "green", alpha = 0.4, size = 2) +
+  geom_point(aes(x = `Stf+ CU`, y = `Stuff+`), alpha = 0.5) +
+  labs(caption = paste("Correlation =", round(cor3, 3)),
+       x = "Stuff+ Curveball") +
+  xlim(0, 200) + ylim(60, 160) +
+  geom_smooth(aes(x = `Stf+ CU`, y = `Stuff+`), method = lm, se = FALSE, color = "blue")
+
+##############
+
+cor4 <- stuff %>% 
+  filter(!is.na(`Stf+ CH`) & !is.na(`Stuff+`)) %>%
+  filter(`Stf+ CH` > 0) %>% 
+  with(cor(`Stf+ CH`,`Stuff+`))
+
+g_CH <- stuff %>% 
+  filter(`Stf+ CH` > 0) %>% 
+  ggplot() + 
+  geom_abline(intercept = 0, slope = 1, color = "green", alpha = 0.4, size = 2) +
+  geom_point(aes(x = `Stf+ CH`, y = `Stuff+`), alpha = 0.5) +
+  labs(caption = paste("Correlation =", round(cor4, 3)),
+       x = "Stuff+ Changeup") +
+  xlim(0, 200) + ylim(60, 160) +
+  geom_smooth(aes(x = `Stf+ CU`, y = `Stuff+`), method = lm, se = FALSE, color = "blue")
+
+
+(g_FA + g_CH) / (g_SL + g_CU)
+```
+
