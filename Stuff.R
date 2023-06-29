@@ -108,4 +108,7 @@ data_init2 <- movement_init1 %>%
 data <- rbind(
   data_init, data_init2)  
 
-
+data <- data %>% 
+  select(Name, year:pitch_hand, pitch_type:pitch_type_name, 
+         IP:`Stf+ Pitch`, pitcher_break_z:percent_rank_diff_x,
+         avg_speed:pitch_per)
