@@ -1,6 +1,7 @@
 library(tidyverse)
 library(readxl)
 library(stringi)
+library(patchwork)
 
 # Function to remove accent marks from a string
 remove_accents <- function(x) {
@@ -112,3 +113,101 @@ data <- data %>%
   select(Name, year:pitch_hand, pitch_type:pitch_type_name, 
          IP:`Stf+ Pitch`, pitcher_break_z:percent_rank_diff_x,
          avg_speed:pitch_per)
+
+# Graphs
+
+# Slider ####
+movement_slider_r <- data %>% 
+  filter(pitch_type == "SL") %>% 
+  filter(pitch_hand == "R") %>% 
+  ggplot() +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
+                 color = `Stuff+`), alpha = 0.7) +
+  scale_y_reverse() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(x = "Horizontal Break",
+       y = "Vertical Break",
+       title = "Sliders (R)") +
+  xlim(40, -40) + ylim(60, -60) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect("white"),
+        plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1)
+  
+movement_slider_l <- data %>% 
+    filter(pitch_type == "SL") %>% 
+    filter(pitch_hand == "L") %>% 
+  ggplot() +
+    geom_vline(xintercept = 0, color = "black") +
+    geom_hline(yintercept = 0, color = "black") +
+    geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
+                   color = `Stuff+`), alpha = 0.7) +
+    scale_y_reverse() +
+    scale_color_gradient(low = "blue", high = "red") +
+    labs(x = "Horizontal Break",
+         y = "Vertical Break",
+         title = "Sliders (L)") +
+    xlim(-40, 40) + ylim(60, -60) +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect("white"),
+          plot.title = element_text(hjust = 0.5)) + 
+    coord_fixed(ratio = 1)
+
+movement_slider <- movement_slider_l + movement_slider_r
+movement_slider
+ggsave("slider.png",movement_slider)
+
+
+# 4-Seam Fastball ####
+movement_fourseam_r <- data %>% 
+  filter(pitch_type == "FF") %>% 
+  filter(pitch_hand == "R") %>% 
+  ggplot() +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
+                 color = `Stuff+`), alpha = 0.7) +
+  scale_y_reverse() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(x = "Horizontal Break",
+       y = "Vertical Break",
+       title = "4-Seam (R)") +
+  xlim(-30, 30) + ylim(-30, 30) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect("white"),
+        plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1)
+
+movement_fourseam_l <- data %>% 
+  filter(pitch_type == "FF") %>% 
+  filter(pitch_hand == "L") %>% 
+  ggplot() +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
+                 color = `Stuff+`), alpha = 0.7) +
+  scale_y_reverse() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(x = "Horizontal Break",
+       y = "Vertical Break",
+       title = "Four-Seam (L)") +
+  xlim(30, -30) + ylim(-30, 30) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect("white"),
+        plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1)
+
+movement_fourseam <- movement_fourseam_l + movement_fourseam_r
+movement_fourseam
+ggsave("fourseam.png",movement_fourseam)
+
