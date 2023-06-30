@@ -90,24 +90,25 @@ stuff_join <- stuff %>%
 data_init <- movement %>% 
   left_join(stuff_join, by = "ID")
 
-data_init <- data %>% 
+data_init1 <- data_init %>% 
   filter(Name != "Luis Garcia")
 
 
 stuff_init1 <- stuff %>% 
+  filter(Name == "Luis Garcia") %>%
   mutate(ID = paste0(Name, Season, Team, "_",pitch_type)) %>% 
   select(IP:`Pitching+`, `Stf+ Pitch`, ID)
 
 movement_init1 <- movement %>%
+  filter(Name == "Luis Garcia") %>%
   mutate(ID = paste0(Name, year, team_name_abbrev, "_", pitch_type))
 
 data_init2 <- movement_init1 %>% 
-  filter(Name == "Luis Garcia") %>% 
   left_join(stuff_init1, by = "ID")
 
 
 data <- rbind(
-  data_init, data_init2)  
+  data_init1, data_init2)  
 
 data <- data %>% 
   select(Name, year:pitch_hand, pitch_type:pitch_type_name, 
@@ -211,3 +212,27 @@ movement_fourseam <- movement_fourseam_l + movement_fourseam_r
 movement_fourseam
 ggsave("fourseam.png",movement_fourseam)
 
+
+
+data %>% 
+  filter(pitch_type == "FF") %>% 
+  filter(pitch_hand == "R") %>% 
+  filter(avg_speed >= 94) %>% 
+  ggplot() +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
+                 color = avg_speed), alpha = 0.75) +
+  scale_y_reverse() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(x = "Horizontal Break",
+       y = "Vertical Break",
+       title = "4-Seam (R)",
+       color = "MPH") +
+  xlim(-30, 30) + ylim(-30, 30) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect("white"),
+        plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1)
