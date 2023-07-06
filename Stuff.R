@@ -188,10 +188,10 @@ data1 <- data1 %>%
          avg_speed:pitch_per) %>% 
   filter(!is.na(IP))
 
-data <- data1 %>% 
+Data <- data1 %>% 
   left_join(e_people_data, by = c("Name" = "Name"))
 
-data <- data %>% 
+Data <- Data %>% 
   select(-`new name`) %>% 
   filter(!is.na(IP)) %>% 
   filter(!is.na(playerID)) %>% 
