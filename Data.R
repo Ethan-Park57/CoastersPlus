@@ -165,7 +165,6 @@ data_init <- movement %>%
 data_init1 <- data_init %>% 
   filter(Name != "Luis Garcia")
 
-
 stuff_init1 <- stuff %>% 
   filter(Name == "Luis Garcia") %>%
   mutate(ID = paste0(Name, Season, Team, "_",pitch_type)) %>% 
@@ -193,6 +192,9 @@ Data <- data1 %>%
 
 Data <- Data %>% 
   filter(playerID != "danisty01")
+
+Data <- Data %>% 
+  mutate(pitch_type_name = str_replace(pitch_type_name, "Slurve", "Slider"))
 
 Data <- Data %>% 
   select(-`new name`) %>% 
