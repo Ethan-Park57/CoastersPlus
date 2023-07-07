@@ -13,9 +13,9 @@ source("Data.R")
 ```{r message = FALSE}
 library(tidyverse)
 library(readxl)
-library(stringi)
 library(patchwork)
-library(Lahman)
+library(kableExtra)
+library(knitr)
 ```
 
 ```{r Slider, message = FALSE, echo = FALSE}
@@ -161,16 +161,28 @@ pitches %>%
 
 ```
 
-```{r, warning = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 results <- pitches %>% 
   select(-c(pos3_int_start_distance:pos9_int_start_distance))
-```
 
-```{r}
 movement <- Data %>% 
   select(pitch_type, pitch_type_name, Stuff, `Stf+ Pitch`:tail, 
          avg_speed, pitches_thrown, pitch_per, playerID) %>% 
   rename(pitch_prop = pitch_per)
+
+movement_league<- movement %>% 
+  group_by(pitch_type_name) %>% 
+  summarize("Horizontal" = 
+              weighted.mean(pitcher_break_x, pitches_thrown),
+            "Vertical" = 
+              weighted.mean(pitcher_break_z, pitches_thrown)) %>% 
+  as.data.frame() %>% 
+  rename(Pitch = pitch_type_name)
+  
+movement_league %>% 
+  kable(digits = 2, align = "c") %>% 
+  kable_styling(full_width = T)
+
 
 movement %>% 
     filter(pitch_type == "SL") %>%
