@@ -193,6 +193,7 @@ Data <- data1 %>%
 Data <- Data %>% 
   filter(playerID != "danisty01")
 
+
 Data <- Data %>% 
   mutate(pitch_type_name = str_replace(pitch_type_name, "Slurve", "Slider"))
 
