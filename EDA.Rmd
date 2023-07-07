@@ -18,12 +18,7 @@ library(patchwork)
 library(Lahman)
 ```
 
-```{r}
-
-
-# Graphs
-
-# Slider ####
+```{r Slider}
 movement_slider_r <- data %>% 
   filter(pitch_type == "SL") %>% 
   filter(pitch_hand == "R") %>% 
@@ -69,8 +64,9 @@ movement_slider_l <- data %>%
 movement_slider <- movement_slider_l + movement_slider_r
 movement_slider
 ggsave("slider.png",movement_slider)
+```
 
-
+``` {r Fastball}
 # 4-Seam Fastball ####
 movement_fourseam_r <- data %>% 
   filter(pitch_type == "FF") %>% 
@@ -142,8 +138,9 @@ data %>%
         panel.background = element_rect("white"),
         plot.title = element_text(hjust = 0.5)) + 
   coord_fixed(ratio = 1)
+```
 
-# Exploratory Data Analysis of Pitch Results Data ####
+``` {r Pitch Results}
 p_1 <- pitches %>% 
   select(result:release_extension) %>% 
   filter(pitches > 9)
