@@ -24,14 +24,17 @@ get_colors <- function(groups, group.col = palette()){
   return(color)
 }
 
-Pitch <- filter(Data, pitch_type_name == "Curveball")
-# Pitch <- mutate(Data, )
+
+
+Pitch <- filter(Data, pitch_type_name == "Changeup")
+color_palette <- colorRampPalette(c("white", "red"))(Pitch$`Stf+ Pitch`)
+# Pitch <- mutate(Data, pristuff = )
 
 # rgl.spheres(Data$pitcher_break_x, Data$pitcher_break_z, Data$avg_speed, r = 0.2, 
          #  color = get_colors(Data$pitch_type))  # Scatter plot
 
 rgl.spheres(Pitch$pitcher_break_x, Pitch$pitcher_break_z, Pitch$avg_speed, r = 0.2, 
-            color = get_colors(Pitch$pitch_type_name))  # Scatter plot
+            color = color_palette)  # Scatter plot
 rgl.bbox(color = "#333377")
 
 rm(Pitch)
