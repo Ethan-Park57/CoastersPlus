@@ -18,7 +18,7 @@ library(patchwork)
 library(Lahman)
 ```
 
-```{r Slider}
+```{r Slider, message = FALSE, echo = FALSE}
 movement_slider_r <- Data %>% 
   filter(pitch_type == "SL") %>% 
   filter(pitch_hand == "R") %>% 
@@ -66,7 +66,7 @@ rm(movement_slider_l)
 rm(movement_slider_r)
 ```
 
-``` {r Fastball}
+``` {r Fastball, warning = FALSE, message = FALSE, echo = FALSE}
 # 4-Seam Fastball ####
 movement_fourseam_r <- Data %>% 
   filter(pitch_type == "FF") %>% 
@@ -141,7 +141,7 @@ Data %>%
   coord_fixed(ratio = 1)
 ```
 
-``` {r Pitch Results}
+``` {r Pitch Results, message = FALSE, echo = FALSE}
 pitches %>% 
   select(result:release_extension) %>% 
   filter(pitches > 9) %>% 
