@@ -60,9 +60,7 @@ movement_slider_l <- Data %>%
           plot.title = element_text(hjust = 0.5)) + 
     coord_fixed(ratio = 1)
 
-movement_slider <- movement_slider_l + movement_slider_r
-movement_slider
-ggsave("slider.png",movement_slider)
+movement_slider_l + movement_slider_r
 ```
 
 ``` {r Fastball}
@@ -109,9 +107,7 @@ movement_fourseam_l <- Data %>%
         plot.title = element_text(hjust = 0.5)) + 
   coord_fixed(ratio = 1)
 
-movement_fourseam <- movement_fourseam_l + movement_fourseam_r
-movement_fourseam
-ggsave("fourseam.png",movement_fourseam)
+movement_fourseam_l + movement_fourseam_r
 
 
 
