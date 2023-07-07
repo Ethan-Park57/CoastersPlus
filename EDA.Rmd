@@ -61,6 +61,8 @@ movement_slider_l <- Data %>%
     coord_fixed(ratio = 1)
 
 movement_slider_l + movement_slider_r
+rm(movement_slider_l)
+rm(movement_slider_r)
 ```
 
 ``` {r Fastball}
@@ -109,6 +111,9 @@ movement_fourseam_l <- Data %>%
 
 movement_fourseam_l + movement_fourseam_r
 
+rm(movement_fourseam_l)
+rm(movement_fourseam_r)
+
 
 
 Data %>% 
@@ -136,19 +141,13 @@ Data %>%
 ```
 
 ``` {r Pitch Results}
-p_1 <- pitches %>% 
+pitches %>% 
   select(result:release_extension) %>% 
-  filter(pitches > 9)
-
-# Andrew Heaney FF Demo ####
-heaney <- p_1 %>% 
+  filter(pitches > 9) %>% 
   filter(player_name == "Heaney, Andrew") %>% 
-  select(result:pitches, player_name:pitch_percent, woba, launch_speed:velocity)
-
-heaney_fast <- heaney %>% 
-  filter(pitch_type == "FF")
-
-heaney_fast %>% 
+  select(result:pitches, player_name:pitch_percent, woba,
+         launch_speed:velocity) %>% 
+  filter(pitch_type == "FF") %>% 
   ggplot(aes(x = result, y = woba, fill = pitches)) +
   geom_col() +
   scale_fill_continuous(low = "#FFE338", high = "forestgreen") +
