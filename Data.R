@@ -196,3 +196,24 @@ Data <- Data %>%
   filter(!is.na(IP)) %>% 
   filter(!is.na(playerID)) %>% 
   filter(Name != "Luis Garcia")
+# Environment Cleaning ####
+rm(data_init)
+rm(data_init1)
+rm(data_init2)
+rm(data1)
+rm(e_movement)
+rm(e_people_data)
+rm(e_stuff)
+rm(movement)
+rm(movement_dirty)
+rm(movement_init1)
+rm(stuff)
+rm(stuff_init1)
+rm(stuff_join)
+rm(clean_names)
+rm(combine_names)
+rm(remove_accents)
+rm(remove_pattern)
+rm(rename_col)
+rm(separate_name_into_first_last)
+   
