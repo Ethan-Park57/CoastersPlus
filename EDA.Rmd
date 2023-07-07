@@ -10,7 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r message = FALSE}
-summary(cars)
 library(tidyverse)
 library(readxl)
 library(stringi)
@@ -19,14 +18,14 @@ library(Lahman)
 ```
 
 ```{r Slider}
-movement_slider_r <- data %>% 
+movement_slider_r <- Data %>% 
   filter(pitch_type == "SL") %>% 
   filter(pitch_hand == "R") %>% 
   ggplot() +
   geom_vline(xintercept = 0, color = "black") +
   geom_hline(yintercept = 0, color = "black") +
   geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
-                 color = `Stuff+`), alpha = 0.7) +
+                 color = `Stuff`), alpha = 0.7) +
   scale_y_reverse() +
   scale_color_gradient(low = "blue", high = "red") +
   labs(x = "Horizontal Break",
@@ -40,14 +39,14 @@ movement_slider_r <- data %>%
         plot.title = element_text(hjust = 0.5)) + 
   coord_fixed(ratio = 1)
   
-movement_slider_l <- data %>% 
+movement_slider_l <- Data %>% 
     filter(pitch_type == "SL") %>% 
     filter(pitch_hand == "L") %>% 
   ggplot() +
     geom_vline(xintercept = 0, color = "black") +
     geom_hline(yintercept = 0, color = "black") +
     geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
-                   color = `Stuff+`), alpha = 0.7) +
+                   color = `Stuff`), alpha = 0.7) +
     scale_y_reverse() +
     scale_color_gradient(low = "blue", high = "red") +
     labs(x = "Horizontal Break",
@@ -68,14 +67,14 @@ ggsave("slider.png",movement_slider)
 
 ``` {r Fastball}
 # 4-Seam Fastball ####
-movement_fourseam_r <- data %>% 
+movement_fourseam_r <- Data %>% 
   filter(pitch_type == "FF") %>% 
   filter(pitch_hand == "R") %>% 
   ggplot() +
   geom_vline(xintercept = 0, color = "black") +
   geom_hline(yintercept = 0, color = "black") +
   geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
-                 color = `Stuff+`), alpha = 0.7) +
+                 color = `Stuff`), alpha = 0.7) +
   scale_y_reverse() +
   scale_color_gradient(low = "blue", high = "red") +
   labs(x = "Horizontal Break",
@@ -89,14 +88,14 @@ movement_fourseam_r <- data %>%
         plot.title = element_text(hjust = 0.5)) + 
   coord_fixed(ratio = 1)
 
-movement_fourseam_l <- data %>% 
+movement_fourseam_l <- Data %>% 
   filter(pitch_type == "FF") %>% 
   filter(pitch_hand == "L") %>% 
   ggplot() +
   geom_vline(xintercept = 0, color = "black") +
   geom_hline(yintercept = 0, color = "black") +
   geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
-                 color = `Stuff+`), alpha = 0.7) +
+                 color = `Stuff`), alpha = 0.7) +
   scale_y_reverse() +
   scale_color_gradient(low = "blue", high = "red") +
   labs(x = "Horizontal Break",
@@ -116,7 +115,7 @@ ggsave("fourseam.png",movement_fourseam)
 
 
 
-data %>% 
+Data %>% 
   filter(pitch_type == "FF") %>% 
   filter(pitch_hand == "R") %>% 
   filter(avg_speed >= 94) %>% 
