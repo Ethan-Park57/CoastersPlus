@@ -172,15 +172,15 @@ movement <- Data %>%
 
 movement_league<- movement %>% 
   group_by(pitch_type_name) %>% 
-  summarize("Horizontal" = 
+  summarize("horizontal" = 
               weighted.mean(pitcher_break_x, pitches_thrown),
-            "Vertical" = 
+            "vertical" = 
               weighted.mean(pitcher_break_z, pitches_thrown)) %>% 
-  as.data.frame() %>% 
-  rename(Pitch = pitch_type_name)
+  as.data.frame()
   
 movement_league %>% 
-  kable(digits = 2, align = "c") %>% 
+  kable(digits = 2, align = "c",
+        col.names = c("Pitch", "Horizontal", "Vertical")) %>% 
   kable_styling(full_width = T)
 
 
