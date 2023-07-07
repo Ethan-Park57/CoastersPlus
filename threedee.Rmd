@@ -1,0 +1,39 @@
+---
+title: "PRI's stuff in 3d"
+output: html_document
+date: "2023-07-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("Data.R")
+```
+
+```{r}
+library("rgl")
+rgl.open()
+rgl.init()
+
+get_colors <- function(groups, group.col = palette()){
+  groups <- as.factor(groups)
+  ngrps <- length(levels(groups))
+  if(ngrps > length(group.col)) 
+    group.col <- rep(group.col, ngrps)
+  color <- group.col[as.numeric(groups)]
+  names(color) <- as.vector(groups)
+  return(color)
+}
+
+Pitch <- filter(Data, pitch_type_name == "Curveball")
+# Pitch <- mutate(Data, )
+
+# rgl.spheres(Data$pitcher_break_x, Data$pitcher_break_z, Data$avg_speed, r = 0.2, 
+         #  color = get_colors(Data$pitch_type))  # Scatter plot
+
+rgl.spheres(Pitch$pitcher_break_x, Pitch$pitcher_break_z, Pitch$avg_speed, r = 0.2, 
+            color = get_colors(Pitch$pitch_type_name))  # Scatter plot
+rgl.bbox(color = "#333377")
+
+rm(Pitch)
+```
+
