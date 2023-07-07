@@ -1,0 +1,208 @@
+---
+title: "EDA"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("Data.R")
+```
+
+
+```{r message = FALSE}
+library(tidyverse)
+library(readxl)
+library(patchwork)
+library(kableExtra)
+library(knitr)
+```
+
+```{r Slider, message = FALSE, echo = FALSE}
+movement_slider_r <- Data %>% 
+  filter(pitch_type == "SL") %>% 
+  filter(pitch_hand == "R") %>% 
+  ggplot() +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
+                 color = `Stuff`), alpha = 0.7) +
+  scale_y_reverse() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(x = "Horizontal Break",
+       y = "Vertical Break",
+       title = "Sliders (R)") +
+  xlim(40, -40) + ylim(60, -60) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect("white"),
+        plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1)
+  
+movement_slider_l <- Data %>% 
+    filter(pitch_type == "SL") %>% 
+    filter(pitch_hand == "L") %>% 
+  ggplot() +
+    geom_vline(xintercept = 0, color = "black") +
+    geom_hline(yintercept = 0, color = "black") +
+    geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
+                   color = `Stuff`), alpha = 0.7) +
+    scale_y_reverse() +
+    scale_color_gradient(low = "blue", high = "red") +
+    labs(x = "Horizontal Break",
+         y = "Vertical Break",
+         title = "Sliders (L)") +
+    xlim(-40, 40) + ylim(60, -60) +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect("white"),
+          plot.title = element_text(hjust = 0.5)) + 
+    coord_fixed(ratio = 1)
+
+movement_slider_l + movement_slider_r
+rm(movement_slider_l)
+rm(movement_slider_r)
+```
+
+``` {r Fastball, warning = FALSE, message = FALSE, echo = FALSE}
+# 4-Seam Fastball ####
+movement_fourseam_r <- Data %>% 
+  filter(pitch_type == "FF") %>% 
+  filter(pitch_hand == "R") %>% 
+  ggplot() +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
+                 color = `Stuff`), alpha = 0.7) +
+  scale_y_reverse() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(x = "Horizontal Break",
+       y = "Vertical Break",
+       title = "4-Seam (R)") +
+  xlim(-30, 30) + ylim(-30, 30) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect("white"),
+        plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1)
+
+movement_fourseam_l <- Data %>% 
+  filter(pitch_type == "FF") %>% 
+  filter(pitch_hand == "L") %>% 
+  ggplot() +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
+                 color = `Stuff`), alpha = 0.7) +
+  scale_y_reverse() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(x = "Horizontal Break",
+       y = "Vertical Break",
+       title = "Four-Seam (L)") +
+  xlim(30, -30) + ylim(-30, 30) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect("white"),
+        plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1)
+
+movement_fourseam_l + movement_fourseam_r
+
+rm(movement_fourseam_l)
+rm(movement_fourseam_r)
+
+
+
+Data %>% 
+  filter(pitch_type == "FF") %>% 
+  filter(pitch_hand == "R") %>% 
+  filter(avg_speed >= 94) %>% 
+  ggplot() +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_point(aes(x = pitcher_break_x, y = pitcher_break_z,
+                 color = avg_speed), alpha = 0.75) +
+  scale_y_reverse() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(x = "Horizontal Break",
+       y = "Vertical Break",
+       title = "4-Seam (R)",
+       color = "MPH") +
+  xlim(-30, 30) + ylim(-30, 30) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect("white"),
+        plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1)
+```
+
+``` {r Pitch Results, message = FALSE, echo = FALSE}
+pitches %>% 
+  select(result:release_extension) %>% 
+  filter(pitches > 9) %>% 
+  filter(player_name == "Heaney, Andrew") %>% 
+  select(result:pitches, player_name:pitch_percent, woba,
+         launch_speed:velocity) %>% 
+  filter(pitch_type == "FF") %>% 
+  ggplot(aes(x = result, y = woba, fill = pitches)) +
+  geom_col() +
+  scale_fill_continuous(low = "#FFE338", high = "forestgreen") +
+  labs(y = "wOBA",
+       x = "Result",
+       fill = "# of Pitches",
+       title = "Andrew Heaney Batted Balls on 4-Seam Fastballs") +
+  theme_classic()
+
+
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+results <- pitches %>% 
+  select(-c(pos3_int_start_distance:pos9_int_start_distance))
+
+movement <- Data %>% 
+  select(pitch_type, pitch_type_name, Stuff, `Stf+ Pitch`:tail, 
+         avg_speed, pitches_thrown, pitch_per, playerID) %>% 
+  rename(pitch_prop = pitch_per)
+
+movement_league<- movement %>% 
+  group_by(pitch_type_name) %>% 
+  summarize("horizontal" = 
+              weighted.mean(pitcher_break_x, pitches_thrown),
+            "vertical" = 
+              weighted.mean(pitcher_break_z, pitches_thrown)) %>% 
+  as.data.frame()
+  
+movement_league %>% 
+  kable(digits = 2, align = "c",
+        col.names = c("Pitch", "Horizontal", "Vertical")) %>% 
+  kable_styling(full_width = T)
+
+
+movement %>% 
+    filter(pitch_type == "SL") %>%
+  ggplot() +
+    geom_vline(xintercept = 0, color = "black") +
+    geom_hline(yintercept = 0, color = "black") +
+    geom_point(aes(x = pitcher_break_x-movement_league$horizontal, 
+                   y = pitcher_break_z-movement_league$vertical,
+                   color = `Stuff`), alpha = 0.7) +
+    scale_y_reverse() +
+    scale_color_gradient(low = "blue", high = "red") +
+    labs(x = "Horizontal Break",
+         y = "Vertical Break",
+         title = "Sliders") +
+    xlim(-30, 30) + ylim(30, -30) +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect("white"),
+          plot.title = element_text(hjust = 0.5)) + 
+    coord_fixed(ratio = 1)
+```
+
