@@ -1,0 +1,48 @@
+---
+title: "2D Movement"
+author: "Ethan Park"
+date: "2023-07-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("Data.R")
+```
+
+```{r}
+plot_movement <- function(type) {
+  pitch_data <- Data %>% 
+    filter(pitch_type_name == type)
+  
+  hb_mean <- summarize(pitch_data, mean = mean(pitcher_break_x))$mean
+  vb_mean <- summarize(pitch_data, mean = mean(pitcher_break_z))$mean
+  hb_min <- summarize(pitch_data, min = min(pitcher_break_x))$min
+  hb_max <- summarize(pitch_data, max = max(pitcher_break_x))$max
+  vb_min <- summarize(pitch_data, min = min(pitcher_break_z))$min
+  vb_max <- summarize(pitch_data, max = max(pitcher_break_z))$max
+  
+  movement <- pitch_data %>% 
+    ggplot() + 
+    geom_point(aes(x = pitcher_break_x,
+                   y = pitcher_break_z,
+                   color = `Stf+ Pitch`), alpha = 0.7) + 
+    geom_vline(xintercept = hb_mean, color = "black") + 
+    geom_hline(yintercept = vb_mean, color = "black") +
+    scale_y_reverse() + 
+    scale_color_gradient(low = "blue", high = "red") +
+    labs(x = "Horizontal Break",
+         y = "Vertical Break", 
+         title = type) +
+    xlim(hb_min, hb_max) + ylim(vb_min, vb_max) + 
+    coord_fixed(ratio = 1) 
+  
+  return(movement)
+}
+
+pitch_types <- unique(Data$pitch_type_name)
+
+plots <- lapply(pitch_types, plot_movement)
+plots
+```
+
