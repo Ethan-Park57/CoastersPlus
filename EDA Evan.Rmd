@@ -168,7 +168,8 @@ results <- pitches %>%
 movement <- Data %>% 
   select(pitch_type, pitch_type_name, Stuff, `Stf+ Pitch`:tail, 
          avg_speed, pitches_thrown, pitch_per, playerID) %>% 
-  rename(pitch_prop = pitch_per)
+  rename(pitch_prop = pitch_per) %>% 
+  filter(!is.na(`Stf+ Pitch`))
 
 movement_league<- movement %>% 
   group_by(pitch_type_name) %>% 
@@ -187,13 +188,13 @@ movement_league %>%
 movement %>% 
     filter(pitch_type == "SL") %>%
   ggplot() +
-    geom_vline(xintercept = 0, color = "black") +
-    geom_hline(yintercept = 0, color = "black") +
+    geom_vline(xintercept = 0, color = "white") +
+    geom_hline(yintercept = 0, color = "white") +
     geom_point(aes(x = pitcher_break_x-movement_league$horizontal, 
                    y = pitcher_break_z-movement_league$vertical,
-                   color = `Stuff`), alpha = 0.7) +
+                   color = `Stf+ Pitch`), alpha = 0.85) +
     scale_y_reverse() +
-    scale_color_gradient(low = "blue", high = "red") +
+    scale_color_gradient(low = "aliceblue", high = "dodgerblue3") +
     labs(x = "Horizontal Break",
          y = "Vertical Break",
          title = "Sliders") +
@@ -201,7 +202,7 @@ movement %>%
     theme(axis.title = element_blank(), axis.ticks = element_blank(), 
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          panel.background = element_rect("white"),
+          panel.background = element_rect("black"),
           plot.title = element_text(hjust = 0.5)) + 
     coord_fixed(ratio = 1)
 ```
