@@ -6,18 +6,19 @@ date: "`r Sys.Date()`"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+source("Data.R")
 ```
 
 
 ```{r message = FALSE}
 library(tidyverse)
 library(readxl)
-library(stringi)
 library(patchwork)
-library(Lahman)
+library(kableExtra)
+library(knitr)
 ```
 
-```{r Slider}
+```{r Slider, message = FALSE, echo = FALSE}
 movement_slider_r <- Data %>% 
   filter(pitch_type == "SL") %>% 
   filter(pitch_hand == "R") %>% 
@@ -65,7 +66,7 @@ rm(movement_slider_l)
 rm(movement_slider_r)
 ```
 
-``` {r Fastball}
+``` {r Fastball, warning = FALSE, message = FALSE, echo = FALSE}
 # 4-Seam Fastball ####
 movement_fourseam_r <- Data %>% 
   filter(pitch_type == "FF") %>% 
@@ -140,7 +141,7 @@ Data %>%
   coord_fixed(ratio = 1)
 ```
 
-``` {r Pitch Results}
+``` {r Pitch Results, message = FALSE, echo = FALSE}
 pitches %>% 
   select(result:release_extension) %>% 
   filter(pitches > 9) %>% 
@@ -160,16 +161,28 @@ pitches %>%
 
 ```
 
-```{r, warning = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 results <- pitches %>% 
   select(-c(pos3_int_start_distance:pos9_int_start_distance))
-```
 
-```{r}
 movement <- Data %>% 
   select(pitch_type, pitch_type_name, Stuff, `Stf+ Pitch`:tail, 
          avg_speed, pitches_thrown, pitch_per, playerID) %>% 
   rename(pitch_prop = pitch_per)
+
+movement_league<- movement %>% 
+  group_by(pitch_type_name) %>% 
+  summarize("horizontal" = 
+              weighted.mean(pitcher_break_x, pitches_thrown),
+            "vertical" = 
+              weighted.mean(pitcher_break_z, pitches_thrown)) %>% 
+  as.data.frame()
+  
+movement_league %>% 
+  kable(digits = 2, align = "c",
+        col.names = c("Pitch", "Horizontal", "Vertical")) %>% 
+  kable_styling(full_width = T)
+
 
 movement %>% 
     filter(pitch_type == "SL") %>%
