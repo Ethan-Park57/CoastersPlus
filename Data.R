@@ -192,6 +192,9 @@ Data <- data1 %>%
   left_join(e_people_data, by = c("Name" = "Name"))
 
 Data <- Data %>% 
+  filter(playerID != "danisty01")
+
+Data <- Data %>% 
   select(-`new name`) %>% 
   filter(!is.na(IP)) %>% 
   filter(!is.na(playerID)) %>% 
@@ -216,4 +219,7 @@ rm(remove_accents)
 rm(remove_pattern)
 rm(rename_col)
 rm(separate_name_into_first_last)
-   
+
+# Nnotes ####
+# Removed Luis Garcia, Tyler Danish
+# Aggregated xxx
