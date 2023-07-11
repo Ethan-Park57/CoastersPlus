@@ -203,6 +203,35 @@ Data <- Data %>%
   filter(!is.na(IP)) %>% 
   filter(!is.na(playerID)) %>% 
   filter(Name != "Luis Garcia")
+
+# Fastball Differential Data ####
+
+Data <- Data %>% 
+  mutate(id = paste0(playerID, "_", year))
+
+FB <- Data %>% 
+  filter(pitch_type == "FF" | pitch_type == "FC" | pitch_type == "SI") %>% 
+  select(id, pitch_type, `Stf+ Pitch`, avg_speed, pitches_thrown) %>% 
+  rename(fb_type = pitch_type, fb_stuff = `Stf+ Pitch`, 
+         fb_speed = avg_speed, fb_thrown = pitches_thrown) %>% 
+  arrange(desc(fb_thrown)) %>% 
+  distinct(id, .keep_all = TRUE)
+
+Data2 <- Data %>% 
+  left_join(FB, by = "id")
+
+Data2 <- Data2 %>% 
+  mutate(speed_diff = avg_speed - fb_speed)
+
+rm(FB)
+
+Data <- Data %>% 
+  select(-id)
+
+Data2 <- Data2 %>% 
+  select(-id)
+
+
 # Environment Cleaning ####
 rm(data_init)
 rm(data_init1)

@@ -81,7 +81,7 @@ movement_fourseam_r <- Data %>%
   labs(x = "Horizontal Break",
        y = "Vertical Break",
        title = "4-Seam (R)") +
-  xlim(-30, 30) + ylim(-30, 30) +
+  xlim(-30, 30) + ylim(30, -30) +
   theme(axis.title = element_blank(), axis.ticks = element_blank(), 
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -102,7 +102,7 @@ movement_fourseam_l <- Data %>%
   labs(x = "Horizontal Break",
        y = "Vertical Break",
        title = "Four-Seam (L)") +
-  xlim(30, -30) + ylim(-30, 30) +
+  xlim(30, -30) + ylim(30, -30) +
   theme(axis.title = element_blank(), axis.ticks = element_blank(), 
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -132,7 +132,7 @@ Data %>%
        y = "Vertical Break",
        title = "4-Seam (R)",
        color = "MPH") +
-  xlim(-30, 30) + ylim(-30, 30) +
+  xlim(-30, 30) + ylim(30, -30) +
   theme(axis.title = element_blank(), axis.ticks = element_blank(), 
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -389,6 +389,19 @@ movement %>%
 ```
 
 ```{r}
-
+Data2 %>% 
+  filter(speed_diff < 0) %>% 
+  ggplot(aes(x = speed_diff, y = `Stf+ Pitch`)) +
+  geom_hline(yintercept = 100, color = "green", size = 1.25, alpha = 0.3) +
+  geom_point(shape = 18, size = 2, alpha = 0.8, aes(color = avg_speed)) +
+  geom_smooth(se = FALSE, color = "white", size = 1.5) +
+  theme_dark() +
+  labs(x = "Speed Differential (vs. Fastball)",
+       y = "Pitch Stuff+",
+       color = "Pitch Speed") +
+  scale_color_gradient(low = "yellow", high = "red", limits = c(70, 100)) +
+  scale_x_reverse() +
+  theme(panel.grid.minor = element_blank()) +
+  NULL
 ```
 
