@@ -207,3 +207,188 @@ movement %>%
     coord_fixed(ratio = 1)
 ```
 
+
+```{r Exploring Stuff+, echo = FALSE}
+movement %>% 
+  ggplot(aes(x = `Stf+ Pitch`, color = pitch_type)) +
+  geom_histogram(fill = "black", binwidth = 2) +
+  labs(x = "Stuff+",
+       y = "",
+       color = "Pitches") +
+  theme_classic()
+
+
+movement %>% 
+  filter(pitch_type == "CU") %>% 
+  ggplot(aes(x = `Stf+ Pitch`)) +
+  geom_histogram(color = "white", fill = "black", binwidth = 2) +
+  labs(x = "Stuff+",
+       y = "",
+       color = "Pitches") +
+  theme_classic()
+```
+
+```{r Classification Table, echo = FALSE}
+Stf_Class <- c("< 55", "< 70", "< 85", "< 95", " < 105", 
+                            "< 115", "< 130", "< 145", "< 160", "≥ 160") %>% 
+  cbind(1:10) %>% 
+  as.data.frame()
+names(Stf_Class) <- c("Stf+ Range", "Class")
+Stf_Class <- Stf_Class %>% 
+  select(Class, `Stf+ Range`)
+
+Stf_Class %>% 
+  kable(caption = "Pitch Classifications for Stuff+") %>% 
+  kable_styling(full_width = T)
+```
+
+``` {r Classifying Stuff+, echo = FALSE, warning = FALSE, message = FALSE}
+movement <- movement %>% 
+  mutate(pitch_class = 
+           case_when(
+             `Stf+ Pitch` < 55 ~ 1,
+             `Stf+ Pitch` < 70 ~ 2,
+             `Stf+ Pitch` < 85 ~ 3,
+             `Stf+ Pitch` < 95 ~ 4,
+             `Stf+ Pitch` < 105 ~ 5,
+             `Stf+ Pitch` < 115 ~ 6,
+             `Stf+ Pitch` < 130 ~ 7,
+             `Stf+ Pitch` < 145 ~ 8,
+             `Stf+ Pitch` < 160 ~ 9,
+             `Stf+ Pitch` >= 160 ~ 10,
+    )
+  )
+
+movement %>% 
+  group_by(pitch_class) %>% 
+  summarize(Count = n()) %>% 
+  as.data.frame() %>% 
+  ggplot(aes(x = pitch_class, y = Count)) + 
+  geom_col(color = "black", fill = "forestgreen") +
+  geom_label(aes(label = Count), vjust = -0.5,
+             color = "forestgreen", fill = "lightgrey") +
+  scale_x_continuous(breaks = seq(1, 10, 1)) +
+  scale_y_continuous(breaks = seq(0, 600, 100), limits = c(0, 600)) +
+  theme_classic() +
+  NULL
+
+
+movement %>% 
+    filter(pitch_type == "SL",
+           pitch_class > 2) %>%
+  ggplot() +
+    geom_vline(xintercept = 0, color = "white") +
+    geom_hline(yintercept = 0, color = "white") +
+    geom_point(aes(x = pitcher_break_x-movement_league$horizontal, 
+                   y = pitcher_break_z-movement_league$vertical,
+                   color = as.factor(pitch_class)), alpha = 0.85) +
+    scale_y_reverse() +
+    labs(x = "Horizontal Break",
+         y = "Vertical Break",
+         title = "Sliders",
+         color = "Pitch Class") +
+    xlim(-30, 30) + ylim(30, -30) +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect("black"),
+          plot.title = element_text(hjust = 0.5)) + 
+    coord_fixed(ratio = 1)
+```
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+pitches <- pitches %>%
+  mutate(Type = 
+           case_when(
+             pitch_type == "CH" ~ "off_speed",
+             pitch_type == "FS" ~ "off_speed",
+             pitch_type == "SL" ~ "breaking_ball",
+             pitch_type == "CU" ~ "breaking_ball",
+             pitch_type == "FF" ~ "fastball",
+             pitch_type == "FC" ~ "fastball",
+             pitch_type == "SI" ~ "fastball"
+           )) 
+pitches %>%   
+  ggplot(aes(x = launch_speed, y = launch_angle, 
+             color = result)) +
+  geom_point(alpha = 0.7) +
+  theme_classic() +
+  labs(y = "Launch Angle", x = "Exit Velocity")
+
+
+movement %>% 
+  filter(`Stf+ Pitch` >= 130,
+           Stuff > 110,
+           pitch_type == "SL" | pitch_type == "CU") %>%
+  ggplot() +
+    geom_vline(xintercept = 0, color = "white") +
+    geom_hline(yintercept = 0, color = "white") +
+    geom_point(aes(x = pitcher_break_x-movement_league$horizontal, 
+                   y = pitcher_break_z-movement_league$vertical,
+                   color = pitch_type), alpha = 0.85) +
+    scale_y_reverse() +
+    labs(x = "Horizontal Break",
+         y = "Vertical Break",
+         title = "Above Average Breaking Balls for Above Average Pitchers",
+         color = "Pitch") +
+    xlim(-20, 20) + ylim(40, -40) +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect("black"),
+          plot.title = element_text(hjust = 0.5)) + 
+    coord_fixed(ratio = 1)
+
+
+movement %>% 
+  filter(`Stf+ Pitch` >= 130,
+           Stuff > 110,
+           pitch_type == "FS" | pitch_type == "CH") %>%
+  ggplot() +
+    geom_vline(xintercept = 0, color = "white") +
+    geom_hline(yintercept = 0, color = "white") +
+    geom_point(aes(x = pitcher_break_x-movement_league$horizontal, 
+                   y = pitcher_break_z-movement_league$vertical,
+                   color = pitch_type), alpha = 0.85) +
+    scale_y_reverse() +
+    labs(x = "Horizontal Break",
+         y = "Vertical Break",
+         title = "Above Average Off-Speed Pitches for Above Average Pitchers",
+         color = "Pitch") +
+    xlim(-20, 20) + ylim(20, -20) +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect("black"),
+          plot.title = element_text(hjust = 0.5)) + 
+    coord_fixed(ratio = 1)
+
+
+movement %>% 
+  filter(`Stf+ Pitch` >= 130,
+           Stuff > 110,
+           pitch_type == "FF" | pitch_type == "FC" | pitch_type == "SI") %>%
+  ggplot() +
+    geom_vline(xintercept = 0, color = "white") +
+    geom_hline(yintercept = 0, color = "white") +
+    geom_point(aes(x = pitcher_break_x-movement_league$horizontal, 
+                   y = pitcher_break_z-movement_league$vertical,
+                   color = pitch_type), alpha = 0.85) +
+    scale_y_reverse() +
+    labs(x = "Horizontal Break",
+         y = "Vertical Break",
+         title = "Above Average Fastballs for Above Average Pitchers",
+         color = "Pitch") +
+    xlim(-20, 20) + ylim(30, -30) +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect("black"),
+          plot.title = element_text(hjust = 0.5)) + 
+    coord_fixed(ratio = 1)
+```
+
+```{r}
+
+```
+

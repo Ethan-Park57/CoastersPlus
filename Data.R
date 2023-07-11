@@ -87,7 +87,8 @@ movement_dirty <- read_excel("Stuff Plus.xlsx", sheet = "Movement")
 movement <- movement_dirty %>% 
   filter(year > 2019)
 
-pitches <- read_excel("Stuff Plus.xlsx", sheet = "Results_Pitch")
+pitches <- read_excel("Stuff Plus.xlsx", sheet = "Results_Pitch") %>% 
+  select(-whiffs, -takes)
 
 # Reformatting Movement (Statcast) ####
 movement <- movement %>% 
