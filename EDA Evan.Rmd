@@ -388,20 +388,71 @@ movement %>%
     coord_fixed(ratio = 1)
 ```
 
-```{r}
+```{r Speed Differential, echo = FALSE, warning = FALSE, message = FALSE}
 Data2 %>% 
   filter(speed_diff < 0) %>% 
   ggplot(aes(x = speed_diff, y = `Stf+ Pitch`)) +
+  theme(panel.background = element_rect("black"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line("darkgray")) +
   geom_hline(yintercept = 100, color = "green", size = 1.25, alpha = 0.3) +
   geom_point(shape = 18, size = 2, alpha = 0.8, aes(color = avg_speed)) +
-  geom_smooth(se = FALSE, color = "white", size = 1.5) +
-  theme_dark() +
+  geom_smooth(se = FALSE, color = "gray92", size = 1.5) +
   labs(x = "Speed Differential (vs. Fastball)",
        y = "Pitch Stuff+",
        color = "Pitch Speed") +
   scale_color_gradient(low = "yellow", high = "red", limits = c(70, 100)) +
   scale_x_reverse() +
-  theme(panel.grid.minor = element_blank()) +
+  NULL
+
+
+
+Data2 %>% 
+  filter(speed_diff < 0) %>% 
+  ggplot(aes(x = speed_diff, y = `Stf+ Pitch`)) +
+  theme(panel.background = element_rect("black"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line("darkgray")) +
+  geom_hline(yintercept = 100, color = "yellow", size = 1, alpha = 0.5) +
+  geom_point(shape = 18, size = 2, alpha = 0.8, aes(color = pitch_type_name)) +
+  geom_smooth(se = FALSE, color = "gray92", size = 1.5) +
+  labs(x = "Speed Differential (vs. Fastball)",
+       y = "Pitch Stuff+",
+       color = "Pitch") +
+  scale_x_reverse() +
+  NULL
+```
+
+```{r Pitch Prop, echo = FALSE, warning = FALSE, message = FALSE}
+Data2 %>% 
+  ggplot(aes(x = avg_speed, y = `Stf+ Pitch`,
+             color = pitch_per)) +
+  theme(panel.background = element_rect("black"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line("darkgray")) +
+  geom_hline(yintercept = 100, color = "yellow", size = 1, alpha = 0.5) +
+  geom_point(alpha = 0.8) +
+  geom_smooth(se = FALSE, color = "gray92", size = 1.5) +
+  labs(x = "Pitch Speed",
+       y = "Pitch Stuff+",
+       color = "Pitch Proportion") +
+  scale_color_gradient(low = "yellow", high = "red", limits = c(0,1)) +
+  NULL
+
+
+Data2 %>% 
+  ggplot(aes(x = pitch_per, y = `Stf+ Pitch`,
+             color = pitch_per)) +
+  theme(panel.background = element_rect("black"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line("darkgray")) +
+  geom_hline(yintercept = 100, color = "yellow", size = 1, alpha = 0.5) +
+  geom_point(alpha = 0.8) +
+  geom_smooth(se = FALSE, color = "gray92", size = 1.5) +
+  labs(x = "Pitch Prop",
+       y = "Pitch Stuff+",
+       color = "Pitch Proportion") +
+  scale_color_gradient(low = "yellow", high = "red", limits = c(0,1)) +
   NULL
 ```
 

@@ -87,6 +87,8 @@ movement_dirty <- read_excel("Stuff Plus.xlsx", sheet = "Movement")
 movement <- movement_dirty %>% 
   filter(year > 2019)
 
+metrics <- read_excel("Stuff Plus.xlsx", sheet = "Metrics")
+
 pitches <- read_excel("Stuff Plus.xlsx", sheet = "Results_Pitch") %>% 
   select(-whiffs, -takes)
 
@@ -108,6 +110,35 @@ movement <- movement %>%
 
 movement <- movement %>%
   mutate(ID = paste0(Name, year, "_", pitch_type))
+
+
+# Reformatting Metrics (Stuff+) ####
+
+metrics <- metrics %>% 
+  mutate(pitch_type = str_replace(pitch_type, "SIFT", "SI"),
+         pitch_type = str_replace(pitch_type, "CUKC", "CU"),
+         pitch_type = str_replace(pitch_type, "ST", "SL"),
+         pitch_type_name = str_replace(pitch_name, "Sweeper", "Slider"),
+         pitch_type = str_replace(pitch_type, "SV", "SL"),
+         pitch_type_name = str_replace(pitch_name, "Sluve", "Slider"))
+
+metrics <- metrics %>% 
+  mutate("Name" = paste(first_name, last_name)) %>% 
+  select(-first_name, -last_name)
+
+metrics <- metrics %>% 
+  mutate_at(vars("Name"), remove_accents)
+
+metrics <- metrics %>%
+  mutate(ID = paste0(Name, Season, "_", pitch_type)) %>% 
+  select(run_value, run_value_per_100, pa:hard_hit_percent, ID)
+
+
+# Combining movement and metrics ####
+
+movement <- movement %>% 
+  left_join(metrics, by = "ID")
+
 
 # Reformatting Stuff (Fangraphs) ####
 stuff <- stuff %>% 
@@ -185,7 +216,7 @@ data1 <- rbind(
 data1 <- data1 %>% 
   select(Name, year:pitch_hand, pitch_type:pitch_type_name, 
          IP:`Stf+ Pitch`, pitcher_break_z:percent_rank_diff_x,
-         avg_speed:pitch_per) %>% 
+         avg_speed:pitch_per, run_value:hard_hit_percent) %>% 
   filter(!is.na(IP))
 
 Data <- data1 %>% 
@@ -256,4 +287,3 @@ rm(separate_name_into_first_last)
 # Nnotes ####
 # Removed Luis Garcia, Tyler Danish
 # Aggregated xxx
-
