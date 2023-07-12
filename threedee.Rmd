@@ -10,38 +10,163 @@ source("Data.R")
 ```
 
 ```{r}
-library("rgl")
-rgl.open()
-rgl.init()
-
-get_colors <- function(groups, group.col = palette()){
-  groups <- as.factor(groups)
-  ngrps <- length(levels(groups))
-  if(ngrps > length(group.col)) 
-    group.col <- rep(group.col, ngrps)
-  color <- group.col[as.numeric(groups)]
-  names(color) <- as.vector(groups)
-  return(color)
-}
-
-
-
-Pitch <- filter(Data, pitch_type_name == "Slider")
-color_palette <- colorRampPalette(c("white", "red"))(Pitch$`Stf+ Pitch`)
-# Pitch <- mutate(Data, pristuff = )
-
-# rgl.spheres(Data$pitcher_break_x, Data$pitcher_break_z, Data$avg_speed, r = 0.2, 
-         #  color = get_colors(Data$pitch_type))  # Scatter plot
-
-rgl.spheres(Pitch$pitcher_break_x, Pitch$pitcher_break_z, Pitch$rise, r = 0.2, 
-            color = color_palette)  # Scatter plot
-rgl.bbox(color = "#333377")
-
-rm(Pitch)
+# library("rgl")
+# rgl.open()
+# rgl.init()
+# 
+# get_colors <- function(groups, group.col = palette()){
+#   groups <- as.factor(groups)
+#   ngrps <- length(levels(groups))
+#   if(ngrps > length(group.col)) 
+#     group.col <- rep(group.col, ngrps)
+#   color <- group.col[as.numeric(groups)]
+#   names(color) <- as.vector(groups)
+#   return(color)
+# }
+# 
+# 
+# 
+# Pitch <- filter(Data, pitch_type_name == "Slider")
+# color_palette <- colorRampPalette(c("white", "red"))(Pitch$`Stf+ Pitch`)
+# # Pitch <- mutate(Data, pristuff = )
+# 
+# # rgl.spheres(Data$pitcher_break_x, Data$pitcher_break_z, Data$avg_speed, r = 0.2, 
+#          #  color = get_colors(Data$pitch_type))  # Scatter plot
+# 
+# rgl.spheres(Pitch$pitcher_break_x, Pitch$pitcher_break_z, Pitch$rise, r = 0.2, 
+#             color = color_palette)  # Scatter plot
+# rgl.bbox(color = "#333377")
+# 
+# rm(Pitch)
 ```
 
 ```{r}
 pitch_names <- unique(Data$pitch_type_name) %>% 
   as.matrix()
+```
+
+
+```{r}
+# head(pitches)
+
+xy <- pitches %>%
+  group_by(pitch_type, result) %>%
+  summarise(Count = sum(pitches)) %>%
+  group_by(pitch_type) %>%
+  mutate(prop = Count / sum(Count))
+
+xy
+
+plot_p <- xy %>%
+  ggplot(aes(x = pitch_type, y = prop, fill = result)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(x = "Pitch Type", y = "Proportion", fill = "Result") +
+  ggtitle("Proportion of Batted Ball Results by Pitch Type")
+
+plot_p
+  
+```
+
+
+```{r}
+pitches %>% 
+  ggplot(aes(x = launch_speed,
+             y = launch_angle,
+             color = pitch_type)) +
+  geom_point(alpha=0.4) +
+  theme_bw()
+```
+```{r}
+library(tidyverse)
+# nfl_teams_data <- read_csv("https://shorturl.at/cfmpW")
+model_data <- Data %>%
+  # mutate(score_diff = points_scored - points_allowed) %>%
+  # Only use rows with air yards
+  filter(pitch_type == "CU") %>%
+  dplyr::select(-Name, -year, -team_name_abbrev, -pitch_hand, -pitch_type_name, -IP,
+                -Stuff, -Location, -Pitching, -pitches_thrown, -total_pitches,
+                -pitches_per_game, -pitch_per, -playerID)
+
+dim(model_data)
+head(model_data)
+```
+```{r}
+model_x <- as.matrix(dplyr::select(model_data, -`Stf+ Pitch`, -pitch_type))
+pca_data <- prcomp(model_x, center = TRUE, scale = TRUE) #<<x
+summary(pca_data)
+```
+```{r}
+library(broom)
+pca_data %>%
+  tidy(matrix = "eigenvalues") %>%
+  ggplot(aes(x = PC, y = percent)) +
+  geom_line() + geom_point() +
+  geom_hline(yintercept = 1 / ncol(model_x),
+             color = "darkred",
+             linetype = "dashed") +
+  theme_bw()
+```
+```{r}
+pca_data %>%
+  augment(model_data) %>% #<<
+  bind_cols({
+    Data %>% 
+      filter(pitch_type == "CU") %>%
+      dplyr::select(year, Name)
+  }) %>%
+  unite("team_name_abbrev", Name:year, sep = "-", #<<
+        remove = FALSE) %>%
+  ggplot(aes(x = .fittedPC1, y = .fittedPC2, 
+             color = year)) +
+  geom_text(aes(label = team_name_abbrev), alpha = 0.9) +
+  scale_color_gradient(low = "purple", high = "green") +
+  theme_bw() + theme(legend.position = "bottom")
+```
+```{r pc-loadings, eval = FALSE} 
+arrow_style <- arrow(
+  angle = 20, ends = "first", type = "closed", 
+  length = grid::unit(8, "pt")
+)
+library(ggrepel)
+pca_data %>%
+  tidy(matrix = "rotation") %>%
+  pivot_wider(names_from = "PC", names_prefix = "PC", 
+              values_from = "value") %>%
+  # mutate(stat_type = ifelse(str_detect(column, "offense"),
+                   #        "offense", "defense")) %>%
+  ggplot(aes(PC1, PC2)) +
+  geom_segment(xend = 0, yend = 0, arrow = arrow_style) +
+  geom_text_repel(aes(label = column),
+                  size = 3) +
+  # scale_color_manual(values = c("darkred", "darkblue")) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+```
+```{r}
+library(tidyverse)
+
+# mlb_data <- read_csv("https://shorturl.at/iCP15") %>%
+# janitor::clean_names() %>%
+# mutate_at(vars(bb_percent:k_percent), parse_number)
+
+model_data_two <- Data %>%
+  filter(!is.na(`Stf+ Pitch`), !is.na(run_value)) %>% 
+  dplyr::select(-Name, -year, -team_name_abbrev, -pitch_hand, -pitch_type,
+                -pitch_type_name, -playerID, -league_break_x, -league_break_z, -tail,
+                -rise, -percent_rank_diff_x, -percent_rank_diff_z, -Stuff, -Pitching)
+
+head(model_data_two)
+
+
+library(ranger)
+init_mlb_rf <- ranger(`Stf+ Pitch` ~ ., data = model_data_two, num.trees = 50, importance
+                      = "impurity")
+
+init_mlb_rf
+
+library(vip)
+vip(init_mlb_rf, geom = "point") + theme_bw()
+
 ```
 
