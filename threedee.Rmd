@@ -151,17 +151,18 @@ library(tidyverse)
 # mutate_at(vars(bb_percent:k_percent), parse_number)
 
 model_data_two <- Data %>%
-  filter(!is.na(`Stf+ Pitch`), !is.na(run_value)) %>% 
-  dplyr::select(-Name, -year, -team_name_abbrev, -pitch_hand, -pitch_type,
-                -pitch_type_name, -playerID, -league_break_x, -league_break_z, -tail,
-                -rise, -percent_rank_diff_x, -percent_rank_diff_z, -Stuff, -Pitching)
+  filter(!is.na(`Stf+ Pitch`), !is.na(run_value)) %>%
+  rename("stfpluspitch" = "Stf+ Pitch") %>% 
+  filter(pitch_type == "CU") %>% 
+  dplyr::select(woba, whiff_percent, hard_hit_percent, 
+                pitcher_break_x, pitcher_break_z, avg_speed, stfpluspitch)
 
 head(model_data_two)
 
 
 library(ranger)
-init_mlb_rf <- ranger(`Stf+ Pitch` ~ ., data = model_data_two, num.trees = 50, importance
-                      = "impurity")
+init_mlb_rf <- ranger(woba ~ ., data = model_data_two, num.trees = 1000,
+                      importance = "impurity") 
 
 init_mlb_rf
 
