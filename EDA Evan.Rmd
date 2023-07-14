@@ -16,6 +16,7 @@ library(readxl)
 library(patchwork)
 library(kableExtra)
 library(knitr)
+library(ranger)
 ```
 
 ```{r Slider, message = FALSE, echo = FALSE}
@@ -167,7 +168,7 @@ results <- pitches %>%
 
 movement <- Data %>% 
   select(pitch_type, pitch_type_name, Stuff, `Stf+ Pitch`:tail, 
-         avg_speed, pitches_thrown, pitch_per, playerID) %>% 
+         avg_speed, pitches_thrown, pitch_per, spin_rate, playerID) %>% 
   rename(pitch_prop = pitch_per) %>% 
   filter(!is.na(`Stf+ Pitch`))
 
@@ -178,12 +179,15 @@ league <- movement %>%
             "vertical" = 
               weighted.mean(pitcher_break_z, pitches_thrown),
             "prop" =  
-              weighted.mean(pitch_prop, pitches_thrown)) %>% 
+              weighted.mean(pitch_prop, pitches_thrown),
+            "spin" =  
+              weighted.mean(spin_rate, pitches_thrown, na.rm = TRUE)) %>% 
   as.data.frame()
   
 league %>% 
   kable(digits = 2, align = "c",
-        col.names = c("Pitch", "Horizontal", "Vertical", "Pitch Proportion")) %>% 
+        col.names = c("Pitch", "Horizontal", "Vertical",
+                      "Pitch Proportion", "Spin Rate")) %>% 
   kable_styling(full_width = T)
 
 
@@ -480,5 +484,13 @@ Data2 %>%
   scale_color_gradient(low = "green", high = "red") +
   scale_x_continuous(limits = c(-0.5, 0.75), labels = scales::percent) +
   NULL
+```
+
+```{r}
+base <- Data2 %>% 
+  select(Name, year, pitch_hand:Stuff, `Stf+ Pitch`, pitcher_break_z,
+         pitcher_break_x, avg_speed, spin_rate, pitches_thrown, pitch_per,
+         run_value:hard_hit_percent, fb_type:speed_diff)
+  
 ```
 

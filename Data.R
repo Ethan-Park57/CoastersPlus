@@ -103,6 +103,14 @@ movement <- movement %>%
 movement <- movement %>% 
   mutate_at(vars("Name"), remove_accents)
 
+movement <- movement %>% 
+  mutate(pitch_type = str_replace(pitch_type, "SIFT", "SI"),
+         pitch_type = str_replace(pitch_type, "CUKC", "CU"),
+         pitch_type = str_replace(pitch_type, "ST", "SL"),
+         pitch_type_name = str_replace(pitch_type_name, "Sweeper", "Slider"),
+         pitch_type = str_replace(pitch_type, "SV", "SL"),
+         pitch_type_name = str_replace(pitch_type_name, "Slurve", "Slider"))
+
 movement <- movement %>%
   mutate(ID = paste0(Name, year, "_", pitch_type))
 
@@ -116,6 +124,14 @@ metrics <- metrics %>%
 metrics <- metrics %>% 
   mutate_at(vars("Name"), remove_accents)
 
+metrics <- metrics %>% 
+  mutate(pitch_type = str_replace(pitch_type, "SIFT", "SI"),
+         pitch_type = str_replace(pitch_type, "CUKC", "CU"),
+         pitch_type = str_replace(pitch_type, "ST", "SL"),
+         pitch_name = str_replace(pitch_name, "Sweeper", "Slider"),
+         pitch_type = str_replace(pitch_type, "SV", "SL"),
+         pitch_name = str_replace(pitch_name, "Slurve", "Slider"))
+
 metrics <- metrics %>%
   mutate(ID = paste0(Name, Season, "_", pitch_type)) %>% 
   select(run_value, run_value_per_100, pa:hard_hit_percent, ID)
@@ -126,13 +142,21 @@ spin <- spin %>%
   mutate("Name" = paste(first_name, last_name))
 
 spin <- spin %>% 
-  pivot_longer(c(FF:CUKC))
+  pivot_longer(c(FF:FS))
 
 spin <- spin %>% 
   rename(pitch_type = name, spin_rate = value)
 
 spin <- spin %>% 
   filter(!is.na(spin_rate))
+
+spin <- spin %>% 
+  mutate(pitch_type = str_replace(pitch_type, "SIFT", "SI"),
+         pitch_type = str_replace(pitch_type, "CUKC", "CU"),
+         pitch_type = str_replace(pitch_type, "ST", "SL"),
+         pitch_type_name = str_replace(pitch_type_name, "Sweeper", "Slider"),
+         pitch_type = str_replace(pitch_type, "SV", "SL"),
+         pitch_type_name = str_replace(pitch_type_name, "Slurve", "Slider"))
 
 spin <- spin %>% 
   mutate(ID = paste0(Name, Season, "_", pitch_type))
@@ -149,14 +173,6 @@ movement <- movement %>%
 movement <- movement %>% 
   left_join(spin, by = "ID")
 
-
-movement <- movement %>% 
-  mutate(pitch_type = str_replace(pitch_type, "SIFT", "SI"),
-         pitch_type = str_replace(pitch_type, "CUKC", "CU"),
-         pitch_type = str_replace(pitch_type, "ST", "SL"),
-         pitch_type_name = str_replace(pitch_type_name, "Sweeper", "Slider"),
-         pitch_type = str_replace(pitch_type, "SV", "SL"),
-         pitch_type_name = str_replace(pitch_type_name, "Sluve", "Slider"))
 
 
 # Reformatting Stuff (Fangraphs) ####
@@ -249,7 +265,8 @@ Data <- data1 %>%
   left_join(e_people_data, by = c("Name" = "Name"))
 
 Data <- Data %>% 
-  filter(playerID != "danisty01")
+  filter(playerID != "danisty01",
+         playerID != "rogerty01")
 
 
 Data <- Data %>% 
@@ -312,5 +329,4 @@ rm(separate_name_into_first_last)
 
 # Nnotes ####
 # Removed Luis Garcia, Tyler Danish
-# Aggregated xxx
-
+# Categorized Sweeper and Slurve as Sliders, Knuckle Curves as Curveballs
