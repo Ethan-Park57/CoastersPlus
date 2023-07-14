@@ -17,6 +17,7 @@ library(patchwork)
 library(kableExtra)
 library(knitr)
 library(ranger)
+library(vip)
 ```
 
 ```{r Slider, message = FALSE, echo = FALSE}
@@ -487,10 +488,78 @@ Data2 %>%
   NULL
 ```
 
-```{r}
+```{r Tree Model}
 base <- Data2 %>% 
   select(Name, year, pitch_hand:Stuff, `Stf+ Pitch`, pitcher_break_z,
          pitcher_break_x, avg_speed, spin_rate, pitches_thrown, pitch_per,
          run_value:hard_hit_percent, fb_type:speed_diff)
+
+
+tree_input <- base %>% 
+  filter(!is.na(`Stf+ Pitch`), !is.na(run_value), !is.na(spin_rate),
+         !is.na(fb_stuff), !is.na(fb_speed), !is.na(fb_thrown),
+         !is.na(speed_diff)) %>% 
+  select(-Name:-pitch_type_name, -fb_type) %>% 
+  rename(pitch_stuff = `Stf+ Pitch`) %>% 
+  select(-est_woba, -slg, -ba, -run_value_per_100, -run_value, -est_slg,
+         -est_ba)
+
+mlb_rf <- ranger(woba ~ ., data = tree_input, num.trees = 1000,
+                      importance = "impurity") 
+
+mlb_rf
+
+vip(mlb_rf, geom = "point") + theme_bw()
+```
+
+```{r Tree of Component Variables, echo = FALSE}
+set.seed(13*38*51)
+
+# Lots of Variables
+model_data_full <- tree_input %>% 
+  select(woba, pitch_stuff, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate,
+         pitch_per, whiff_percent, fb_stuff, fb_thrown, speed_diff) %>% 
+  filter(speed_diff != 0)
+
+model_full <- ranger(woba ~ ., data = model_data_full, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(model_full, geom = "point") + 
+  labs(title = "Thorough Model",
+       caption = "Variables: pitch_stuff, pitcher_break_z, pitcher_break_x, 
+       avg_speed, spin_rate, pitch_per, whiff_percent, fb_stuff,
+       fb_thrown, speed_diff") +
+  theme_bw()
+
+
+# Fewer Variables
+model_data_reduced <- tree_input %>% 
+  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, 
+         speed_diff) %>% 
+  filter(speed_diff != 0) %>% 
+  select(-speed_diff)
+
+model_reduced <- ranger(woba ~ ., data = model_data_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(model_reduced, geom = "point") + 
+  labs(title = "Reduced Model",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
+  theme_bw()
+
+
+# Fewer Variables, non-comparable population
+model_data_reduced <- tree_input %>% 
+  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate)
+
+model_reduced <- ranger(woba ~ ., data = model_data_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(model_reduced, geom = "point") + 
+   labs(title = "Reduced Model",
+        subtitle = "Primary Fastball Included",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
+  theme_bw()
+
 ```
 
