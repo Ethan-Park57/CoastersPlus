@@ -18,6 +18,8 @@ library(kableExtra)
 library(knitr)
 library(ranger)
 library(vip)
+library(rpart)
+library(rpart.plot)
 ```
 
 ```{r Slider, message = FALSE, echo = FALSE}
@@ -213,7 +215,6 @@ movement %>%
           plot.title = element_text(hjust = 0.5)) + 
     coord_fixed(ratio = 1)
 ```
-
 
 ```{r Exploring Stuff+, echo = FALSE}
 movement %>% 
@@ -430,11 +431,6 @@ Data2 %>%
   NULL
 ```
 
-```{r}
-
-```
-
-
 ```{r Pitch Prop, echo = FALSE, warning = FALSE, message = FALSE}
 Data2 %>% 
   ggplot(aes(x = avg_speed, y = `Stf+ Pitch`,
@@ -518,7 +514,7 @@ set.seed(13*38*51)
 # Lots of Variables
 model_data_full <- tree_input %>% 
   select(woba, pitch_stuff, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate,
-         pitch_per, whiff_percent, fb_stuff, fb_thrown, speed_diff) %>% 
+         pitch_per, fb_stuff, fb_thrown, speed_diff) %>% 
   filter(speed_diff != 0)
 
 model_full <- ranger(woba ~ ., data = model_data_full, num.trees = 1000,
@@ -527,9 +523,24 @@ model_full <- ranger(woba ~ ., data = model_data_full, num.trees = 1000,
 vip(model_full, geom = "point") + 
   labs(title = "Thorough Model",
        caption = "Variables: pitch_stuff, pitcher_break_z, pitcher_break_x, 
-       avg_speed, spin_rate, pitch_per, whiff_percent, fb_stuff,
+       avg_speed, spin_rate, pitch_per, fb_stuff,
        fb_thrown, speed_diff") +
   theme_bw()
+
+
+model_data_full %>% 
+  lm(woba ~ pitch_stuff + pitcher_break_z + pitcher_break_x + avg_speed + 
+       spin_rate + pitch_per + fb_stuff + fb_thrown + speed_diff,
+     data = .) %>% 
+  summary()
+
+
+tree_1 <- rpart(formula =woba ~ pitch_stuff + pitcher_break_z + pitcher_break_x + 
+                  avg_speed + spin_rate + pitch_per + fb_stuff + fb_thrown + 
+                  speed_diff,
+     data = model_data_full, method = "anova")
+
+tree_1 %>% rpart.plot()
 
 
 # Fewer Variables
@@ -546,6 +557,17 @@ vip(model_reduced, geom = "point") +
   labs(title = "Reduced Model",
        caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
   theme_bw()
+
+model_data_reduced %>% 
+  lm(woba ~ pitcher_break_z + pitcher_break_x +avg_speed + spin_rate, data = .) %>% 
+  summary()
+
+
+tree_2 <- rpart(formula = woba ~ pitcher_break_z + pitcher_break_x + 
+                  avg_speed + spin_rate,
+     data = model_data_reduced, method = "anova")
+
+tree_2 %>% rpart.plot()
 
 
 # Fewer Variables, non-comparable population
