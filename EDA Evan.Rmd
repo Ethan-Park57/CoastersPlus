@@ -468,6 +468,7 @@ Data2 %>%
   scale_x_continuous(limits = c(-1,2.5), labels = scales::percent) +
   NULL
 
+
 Data2 %>% 
   ggplot(aes(x = pitch_per-league$prop, y = `Stf+ Pitch`,
              color = woba)) +
@@ -491,6 +492,5 @@ base <- Data2 %>%
   select(Name, year, pitch_hand:Stuff, `Stf+ Pitch`, pitcher_break_z,
          pitcher_break_x, avg_speed, spin_rate, pitches_thrown, pitch_per,
          run_value:hard_hit_percent, fb_type:speed_diff)
-  
 ```
 

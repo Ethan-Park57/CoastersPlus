@@ -154,9 +154,7 @@ spin <- spin %>%
   mutate(pitch_type = str_replace(pitch_type, "SIFT", "SI"),
          pitch_type = str_replace(pitch_type, "CUKC", "CU"),
          pitch_type = str_replace(pitch_type, "ST", "SL"),
-         pitch_type_name = str_replace(pitch_type_name, "Sweeper", "Slider"),
-         pitch_type = str_replace(pitch_type, "SV", "SL"),
-         pitch_type_name = str_replace(pitch_type_name, "Slurve", "Slider"))
+         pitch_type = str_replace(pitch_type, "SV", "SL"))
 
 spin <- spin %>% 
   mutate(ID = paste0(Name, Season, "_", pitch_type))
@@ -230,7 +228,8 @@ spin <- read_excel("Stuff Plus.xlsx", sheet = "Spin") %>%
   mutate("Name" = paste(first_name, last_name)) %>% 
   pivot_longer(c(FF:CUKC)) %>% 
   rename(pitch_type = name, spin_rate = value) %>% 
-  filter(!is.na(spin_rate))
+  filter(!is.na(spin_rate)) %>% 
+  select(Season, Name, player_id, pitch_type, spin_rate)
 
 # Aggregation ####
 data_init <- movement %>% 
@@ -330,3 +329,4 @@ rm(separate_name_into_first_last)
 # Nnotes ####
 # Removed Luis Garcia, Tyler Danish
 # Categorized Sweeper and Slurve as Sliders, Knuckle Curves as Curveballs
+
