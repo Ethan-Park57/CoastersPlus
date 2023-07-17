@@ -4,13 +4,12 @@ output: html_document
 date: "`r Sys.Date()`"
 ---
 
-```{r setup, include=FALSE}
+```{r Setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 source("Data.R")
 ```
 
-
-```{r message = FALSE}
+```{r Libraries, message = FALSE}
 library(tidyverse)
 library(readxl)
 library(patchwork)
@@ -165,7 +164,7 @@ pitches %>%
 
 ```
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r League Movement & Slider Plots, warning = FALSE, message = FALSE, echo = FALSE}
 results <- pitches %>% 
   select(-c(pos3_int_start_distance:pos9_int_start_distance))
 
@@ -304,7 +303,7 @@ movement %>%
     coord_fixed(ratio = 1)
 ```
 
-```{r, echo = FALSE, warning = FALSE, message = FALSE}
+```{r Movement Plots, echo = FALSE, warning = FALSE, message = FALSE}
 pitches <- pitches %>%
   mutate(Type = 
            case_when(
@@ -582,6 +581,10 @@ vip(model_reduced, geom = "point") +
         subtitle = "Primary Fastball Included",
        caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
   theme_bw()
+
+```
+
+```{r}
 
 ```
 

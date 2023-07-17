@@ -1,3 +1,4 @@
+# Libraries ####
 library(tidyverse)
 library(readxl)
 library(stringi)
@@ -326,7 +327,7 @@ rm(remove_pattern)
 rm(rename_col)
 rm(separate_name_into_first_last)
 
-# Nnotes ####
+# Notes ####
 # Removed Luis Garcia, Tyler Danish
 # Categorized Sweeper and Slurve as Sliders, Knuckle Curves as Curveballs
 
