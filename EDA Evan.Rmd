@@ -752,3 +752,20 @@ Data2 %>%
   theme_dark()
 ```
 
+```{r Pitch Sequencing EDA}
+seq2022<- seq2022 %>% 
+  rename(Name = ...1)
+
+seq2022 <- cbind(seq2022$Name, seq2022 %>% 
+  select(-Name) %>% 
+  mutate_all(.funs = ~ . / 100)) %>% 
+  rename(Name = `seq2022$Name`)
+
+test <- seq2022 %>% 
+  select(Name, `FF-SL`)
+
+test %>% 
+  ggplot(aes(x = `FF-SL`)) +
+  geom_histogram(color = "white", fill = "black", binwidth = 0.01)
+```
+
