@@ -95,6 +95,8 @@ pitches <- read_excel("Stuff Plus.xlsx", sheet = "Results_Pitch") %>%
 
 spin <- read_excel("Stuff Plus.xlsx", sheet = "Spin")
 
+seq2022 <- read_csv("2022_seq.csv")
+
 # Reformatting Movement (Statcast) ####
 
 movement <- movement %>% 
