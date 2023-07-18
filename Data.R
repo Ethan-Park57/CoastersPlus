@@ -1,3 +1,4 @@
+# Libraries ####
 library(tidyverse)
 library(readxl)
 library(stringi)
@@ -87,26 +88,91 @@ movement_dirty <- read_excel("Stuff Plus.xlsx", sheet = "Movement")
 movement <- movement_dirty %>% 
   filter(year > 2019)
 
-pitches <- read_excel("Stuff Plus.xlsx", sheet = "Results_Pitch")
+metrics <- read_excel("Stuff Plus.xlsx", sheet = "Metrics")
+
+pitches <- read_excel("Stuff Plus.xlsx", sheet = "Results_Pitch") %>% 
+  select(-whiffs, -takes)
+
+spin <- read_excel("Stuff Plus.xlsx", sheet = "Spin")
 
 # Reformatting Movement (Statcast) ####
+
+movement <- movement %>% 
+  mutate("Name" = paste(first_name, last_name)) %>% 
+  select(-first_name, -last_name, -team_name, -diff_z, -diff_x)
+
+movement <- movement %>% 
+  mutate_at(vars("Name"), remove_accents)
+
 movement <- movement %>% 
   mutate(pitch_type = str_replace(pitch_type, "SIFT", "SI"),
          pitch_type = str_replace(pitch_type, "CUKC", "CU"),
          pitch_type = str_replace(pitch_type, "ST", "SL"),
          pitch_type_name = str_replace(pitch_type_name, "Sweeper", "Slider"),
          pitch_type = str_replace(pitch_type, "SV", "SL"),
-         pitch_type_name = str_replace(pitch_type_name, "Sluve", "Slider"))
-
-movement <- movement %>% 
-  mutate("Name" = paste(first_name, last_name)) %>% 
-  select(-first_name, -last_name, -team_name, -pitcher_id, -diff_z, -diff_x)
-
-movement <- movement %>% 
-  mutate_at(vars("Name"), remove_accents)
+         pitch_type_name = str_replace(pitch_type_name, "Slurve", "Slider"))
 
 movement <- movement %>%
   mutate(ID = paste0(Name, year, "_", pitch_type))
+
+
+# Reformatting Metrics (Stuff+) ####
+
+metrics <- metrics %>% 
+  mutate("Name" = paste(first_name, last_name)) %>% 
+  select(-first_name, -last_name)
+
+metrics <- metrics %>% 
+  mutate_at(vars("Name"), remove_accents)
+
+metrics <- metrics %>% 
+  mutate(pitch_type = str_replace(pitch_type, "SIFT", "SI"),
+         pitch_type = str_replace(pitch_type, "CUKC", "CU"),
+         pitch_type = str_replace(pitch_type, "ST", "SL"),
+         pitch_name = str_replace(pitch_name, "Sweeper", "Slider"),
+         pitch_type = str_replace(pitch_type, "SV", "SL"),
+         pitch_name = str_replace(pitch_name, "Slurve", "Slider"))
+
+metrics <- metrics %>%
+  mutate(ID = paste0(Name, Season, "_", pitch_type)) %>% 
+  select(run_value, run_value_per_100, pa:hard_hit_percent, ID)
+
+# Reformatting spin ####
+
+spin <- spin %>% 
+  mutate("Name" = paste(first_name, last_name))
+
+spin <- spin %>% 
+  pivot_longer(c(FF:FS))
+
+spin <- spin %>% 
+  rename(pitch_type = name, spin_rate = value)
+
+spin <- spin %>% 
+  filter(!is.na(spin_rate))
+
+spin <- spin %>% 
+  mutate(pitch_type = str_replace(pitch_type, "SIFT", "SI"),
+         pitch_type = str_replace(pitch_type, "CUKC", "CU"),
+         pitch_type = str_replace(pitch_type, "ST", "SL"),
+         pitch_type = str_replace(pitch_type, "SV", "SL"))
+
+spin <- spin %>% 
+  mutate(ID = paste0(Name, Season, "_", pitch_type))
+
+spin <- spin %>% 
+  select(ID, spin_rate)
+
+
+# Combining movement, metrics, spin ####
+
+movement <- movement %>% 
+  left_join(metrics, by = "ID")
+
+movement <- movement %>% 
+  left_join(spin, by = "ID")
+
+
 
 # Reformatting Stuff (Fangraphs) ####
 stuff <- stuff %>% 
@@ -158,6 +224,14 @@ stuff <- stuff %>%
 stuff_join <- stuff %>% 
   select(IP:`Pitching`, `Stf+ Pitch`, ID)
 
+# Adding back spin data ####
+spin <- read_excel("Stuff Plus.xlsx", sheet = "Spin") %>% 
+  mutate("Name" = paste(first_name, last_name)) %>% 
+  pivot_longer(c(FF:CUKC)) %>% 
+  rename(pitch_type = name, spin_rate = value) %>% 
+  filter(!is.na(spin_rate)) %>% 
+  select(Season, Name, player_id, pitch_type, spin_rate)
+
 # Aggregation ####
 data_init <- movement %>% 
   left_join(stuff_join, by = "ID")
@@ -184,14 +258,15 @@ data1 <- rbind(
 data1 <- data1 %>% 
   select(Name, year:pitch_hand, pitch_type:pitch_type_name, 
          IP:`Stf+ Pitch`, pitcher_break_z:percent_rank_diff_x,
-         avg_speed:pitch_per) %>% 
+         avg_speed:pitch_per, spin_rate, run_value:hard_hit_percent) %>% 
   filter(!is.na(IP))
 
 Data <- data1 %>% 
   left_join(e_people_data, by = c("Name" = "Name"))
 
 Data <- Data %>% 
-  filter(playerID != "danisty01")
+  filter(playerID != "danisty01",
+         playerID != "rogerty01")
 
 
 Data <- Data %>% 
@@ -202,6 +277,35 @@ Data <- Data %>%
   filter(!is.na(IP)) %>% 
   filter(!is.na(playerID)) %>% 
   filter(Name != "Luis Garcia")
+
+# Fastball Differential Data ####
+
+Data <- Data %>% 
+  mutate(id = paste0(playerID, "_", year))
+
+FB <- Data %>% 
+  filter(pitch_type == "FF" | pitch_type == "FC" | pitch_type == "SI") %>% 
+  select(id, pitch_type, `Stf+ Pitch`, avg_speed, pitches_thrown) %>% 
+  rename(fb_type = pitch_type, fb_stuff = `Stf+ Pitch`, 
+         fb_speed = avg_speed, fb_thrown = pitches_thrown) %>% 
+  arrange(desc(fb_thrown)) %>% 
+  distinct(id, .keep_all = TRUE)
+
+Data2 <- Data %>% 
+  left_join(FB, by = "id")
+
+Data2 <- Data2 %>% 
+  mutate(speed_diff = avg_speed - fb_speed)
+
+rm(FB)
+
+Data <- Data %>% 
+  select(-id)
+
+Data2 <- Data2 %>% 
+  select(-id)
+
+
 # Environment Cleaning ####
 rm(data_init)
 rm(data_init1)
@@ -223,6 +327,7 @@ rm(remove_pattern)
 rm(rename_col)
 rm(separate_name_into_first_last)
 
-# Nnotes ####
+# Notes ####
 # Removed Luis Garcia, Tyler Danish
-# Aggregated xxx
+# Categorized Sweeper and Slurve as Sliders, Knuckle Curves as Curveballs
+
