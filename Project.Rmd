@@ -20,3 +20,384 @@ library(vip)
 library(rpart)
 library(rpart.plot)
 ```
+
+
+```{r League Movement, warning = FALSE, message = FALSE, echo = FALSE}
+results <- pitches %>% 
+  select(-c(pos3_int_start_distance:pos9_int_start_distance))
+
+movement <- Data %>% 
+  select(pitch_type, pitch_type_name, Stuff, `Stf+ Pitch`:tail, 
+         avg_speed, pitches_thrown, pitch_per, spin_rate, playerID) %>% 
+  rename(pitch_prop = pitch_per) %>% 
+  filter(!is.na(`Stf+ Pitch`))
+
+league <- movement %>% 
+  group_by(pitch_type_name) %>% 
+  summarize("horizontal" = 
+              weighted.mean(pitcher_break_x, pitches_thrown),
+            "vertical" = 
+              weighted.mean(pitcher_break_z, pitches_thrown),
+            "prop" =  
+              weighted.mean(pitch_prop, pitches_thrown),
+            "spin" =  
+              weighted.mean(spin_rate, pitches_thrown, na.rm = TRUE)) %>% 
+  as.data.frame()
+  
+league %>% 
+  kable(digits = 2, align = "c",
+        col.names = c("Pitch", "Horizontal", "Vertical",
+                      "Pitch Proportion", "Spin Rate")) %>% 
+  kable_styling(full_width = T)
+```
+
+```{r Stuff+ Histogram, echo = FALSE}
+movement %>% 
+  filter(pitch_type == "CU") %>% 
+  ggplot(aes(x = `Stf+ Pitch`)) +
+  geom_histogram(color = "white", fill = "black", binwidth = 2) +
+  labs(x = "Stuff+",
+       y = "",
+       color = "Pitches") +
+  theme_classic()
+```
+
+```{r Classification Table, echo = FALSE}
+Stf_Class <- c("< 55", "< 70", "< 85", "< 95", " < 105", 
+                            "< 115", "< 130", "< 145", "< 160", "≥ 160") %>% 
+  cbind(1:10) %>% 
+  as.data.frame()
+names(Stf_Class) <- c("Stf+ Range", "Class")
+Stf_Class <- Stf_Class %>% 
+  select(Class, `Stf+ Range`)
+
+Stf_Class %>% 
+  kable(caption = "Pitch Classifications for Stuff+") %>% 
+  kable_styling(full_width = T)
+```
+
+``` {r Classifying Stuff+, echo = FALSE, warning = FALSE, message = FALSE}
+movement <- movement %>% 
+  mutate(pitch_class = 
+           case_when(
+             `Stf+ Pitch` < 55 ~ 1,
+             `Stf+ Pitch` < 70 ~ 2,
+             `Stf+ Pitch` < 85 ~ 3,
+             `Stf+ Pitch` < 95 ~ 4,
+             `Stf+ Pitch` < 105 ~ 5,
+             `Stf+ Pitch` < 115 ~ 6,
+             `Stf+ Pitch` < 130 ~ 7,
+             `Stf+ Pitch` < 145 ~ 8,
+             `Stf+ Pitch` < 160 ~ 9,
+             `Stf+ Pitch` >= 160 ~ 10,
+    )
+  )
+
+movement %>% 
+  group_by(pitch_class) %>% 
+  summarize(Count = n()) %>% 
+  as.data.frame() %>% 
+  ggplot(aes(x = pitch_class, y = Count)) + 
+  geom_col(color = "black", fill = "forestgreen") +
+  geom_label(aes(label = Count), vjust = -0.5,
+             color = "forestgreen", fill = "lightgrey") +
+  scale_x_continuous(breaks = seq(1, 10, 1)) +
+  scale_y_continuous(breaks = seq(0, 600, 100), limits = c(0, 600)) +
+  theme_classic() +
+  NULL
+
+
+movement %>% 
+    filter(pitch_type == "SL",
+           pitch_class > 2) %>%
+  ggplot() +
+    geom_vline(xintercept = 0, color = "white") +
+    geom_hline(yintercept = 0, color = "white") +
+    geom_point(aes(x = pitcher_break_x-league$horizontal, 
+                   y = pitcher_break_z-league$vertical,
+                   color = as.factor(pitch_class)), alpha = 0.85) +
+    scale_y_reverse() +
+    labs(x = "Horizontal Break",
+         y = "Vertical Break",
+         title = "Sliders",
+         color = "Pitch Class") +
+    xlim(-30, 30) + ylim(30, -30) +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect("black"),
+          plot.title = element_text(hjust = 0.5)) + 
+    coord_fixed(ratio = 1)
+```
+
+```{r Speed Differential, echo = FALSE, warning = FALSE, message = FALSE}
+Data2 %>% 
+  filter(speed_diff < 0) %>% 
+  ggplot(aes(x = speed_diff, y = `Stf+ Pitch`)) +
+  theme(panel.background = element_rect("black"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line("darkgray")) +
+  geom_hline(yintercept = 100, color = "green", size = 1.25, alpha = 0.3) +
+  geom_point(shape = 18, size = 2, alpha = 0.8, aes(color = avg_speed)) +
+  geom_smooth(se = FALSE, color = "gray92", size = 1.5) +
+  labs(x = "Speed Differential (vs. Fastball)",
+       y = "Pitch Stuff+",
+       color = "Pitch Speed") +
+  scale_color_gradient(low = "yellow", high = "red", limits = c(70, 100)) +
+  scale_x_reverse() +
+  NULL
+
+
+
+Data2 %>% 
+  filter(speed_diff < 0) %>% 
+  ggplot(aes(x = speed_diff, y = `Stf+ Pitch`)) +
+  theme(panel.background = element_rect("black"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line("darkgray")) +
+  geom_hline(yintercept = 100, color = "yellow", size = 1, alpha = 0.5) +
+  geom_point(shape = 18, size = 2, alpha = 0.8, aes(color = pitch_type_name)) +
+  geom_smooth(se = FALSE, color = "gray92", size = 1.5) +
+  labs(x = "Speed Differential (vs. Fastball)",
+       y = "Pitch Stuff+",
+       color = "Pitch") +
+  scale_x_reverse() +
+  NULL
+```
+
+```{r Pitch Prop, echo = FALSE, warning = FALSE, message = FALSE}
+Data2 %>% 
+  ggplot(aes(x = `Stf+ Pitch`, y = (pitch_per-league$prop)/league$prop,
+             color = woba)) +
+  theme(panel.background = element_rect("black"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line("darkgray")) +
+  geom_hline(yintercept = 0, color = "yellow", size = 1, alpha = 0.7) +
+  geom_vline(xintercept = 100, color = "yellow", size = 1, alpha = 0.7) +
+  geom_point(alpha = 0.8) +
+  geom_smooth(se = FALSE, color = "gray92", size = 1.5) +
+  labs(x = "Pitch Stuff+",
+       y = "Pitch Usage (vs. League Average)",
+       color = "wOBA") +
+  scale_color_gradient(low = "green", high = "red") +
+  scale_y_continuous(limits = c(-1,2.5), labels = scales::percent) +
+  NULL
+
+```
+
+```{r Tree Model, echo = FALSE}
+base <- Data2 %>% 
+  select(Name, year, pitch_hand:Stuff, `Stf+ Pitch`, pitcher_break_z,
+         pitcher_break_x, avg_speed, spin_rate, pitches_thrown, pitch_per,
+         run_value:hard_hit_percent, fb_type:speed_diff)
+
+
+tree_input <- base %>% 
+  filter(!is.na(`Stf+ Pitch`), !is.na(run_value), !is.na(spin_rate),
+         !is.na(fb_stuff), !is.na(fb_speed), !is.na(fb_thrown),
+         !is.na(speed_diff)) %>% 
+  select(-Name:-pitch_type_name, -fb_type) %>% 
+  rename(pitch_stuff = `Stf+ Pitch`) %>% 
+  select(-est_woba, -slg, -ba, -run_value_per_100, -run_value, -est_slg,
+         -est_ba)
+
+mlb_rf <- ranger(woba ~ ., data = tree_input, num.trees = 1000,
+                      importance = "impurity") 
+
+mlb_rf
+
+vip(mlb_rf, geom = "point") + theme_bw()
+```
+
+```{r Tree of Component Variables, echo = FALSE}
+set.seed(13*38*51)
+
+# Lots of Variables
+model_data_full <- tree_input %>% 
+  select(woba, pitch_stuff, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate,
+         pitch_per, fb_stuff, fb_thrown, speed_diff) %>% 
+  filter(speed_diff != 0)
+
+
+rpart(formula =woba ~ pitch_stuff + pitcher_break_z + pitcher_break_x + 
+                  avg_speed + spin_rate + pitch_per + fb_stuff + fb_thrown + 
+                  speed_diff,
+     data = model_data_full, method = "anova") %>%
+  rpart.plot()
+
+
+# Fewer Variables
+model_data_reduced <- tree_input %>% 
+  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, 
+         speed_diff) %>% 
+  filter(speed_diff != 0) %>% 
+  select(-speed_diff)
+
+model_reduced <- ranger(woba ~ ., data = model_data_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(model_reduced, geom = "point") + 
+  labs(title = "Reduced Model",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
+  theme_bw()
+
+
+rpart(formula = woba ~ pitcher_break_z + pitcher_break_x + 
+                  avg_speed + spin_rate,
+     data = model_data_reduced, method = "anova") %>%
+  rpart.plot()
+
+```
+
+
+### Variable Importance {.tabset}
+#### Sliders (Slider, Sweeper, Slurve
+```{r Slider VIP, echo = FALSE}
+
+slider_reduced <- Data2 %>% 
+  filter(pitch_type == "SL") %>% 
+  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, 
+         speed_diff) %>% 
+  filter(!is.na(spin_rate), !is.na(speed_diff))
+
+slider_model <- ranger(woba ~ ., data = slider_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(slider_model, geom = "point") + 
+  labs(title = "Reduced Model",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
+  theme_bw()
+
+```
+
+#### Fastballs (Four-Seam, Cutter, Sinker)
+```{r Fastballs VIP, echo = FALSE}
+
+fastball_reduced <- Data2 %>% 
+  filter(pitch_type == "FC" | pitch_type == "FF" | pitch_type == "SI") %>% 
+  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, pitch_type) %>% 
+  filter(!is.na(spin_rate))
+
+fastball_model <- ranger(woba ~ ., data = fastball_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(fastball_model, geom = "point") + 
+  labs(title = "Reduced Model",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
+  theme_bw()
+
+```
+
+#### Curveballs
+```{r Curveballs VIP, echo = FALSE}
+curveball_reduced <- Data2 %>% 
+  filter(pitch_type == "CU") %>% 
+  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate) %>% 
+  filter(!is.na(spin_rate))
+
+curveball_model <- ranger(woba ~ ., data = curveball_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(curveball_model, geom = "point") + 
+  labs(title = "Reduced Model",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
+  theme_bw()
+
+```
+
+#### Change-Up (Change-Up / Splitter)
+```{r Change-Ups VIP, echo = FALSE}
+changeup_reduced <- Data2 %>% 
+  filter(pitch_type == "CH" | pitch_type == "FS") %>% 
+  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate) %>% 
+  filter(!is.na(spin_rate))
+
+changeup_model <- ranger(woba ~ ., data = changeup_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(changeup_model, geom = "point") + 
+  labs(title = "Reduced Model",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
+  theme_bw()
+
+```
+
+### {-}
+
+
+### Decision Trees {.tabset}
+#### Sliders (Slider, Sweeper, Slurve)
+```{r Slider Decision Tree, echo = FALSE}
+rpart(formula = woba ~ pitcher_break_z + pitcher_break_x + 
+                  avg_speed + spin_rate,
+     data = slider_reduced, method = "anova") %>%
+  rpart.plot()
+
+```
+
+#### Fastballs (Four-Seam, Cutter, Sinker)
+```{r Fastball Decision Tree, echo = FALSE}
+
+rpart(formula = woba ~ pitcher_break_z + pitcher_break_x + 
+                  avg_speed + spin_rate + pitch_type,
+     data = fastball_reduced, method = "anova") %>%
+  rpart.plot()
+```
+
+#### Curveballs
+```{r Curveball Decision Tree, echo = FALSE}
+
+rpart(formula = woba ~ pitcher_break_z + pitcher_break_x + 
+                  avg_speed + spin_rate,
+     data = curveball_reduced, method = "anova") %>%
+  rpart.plot()
+```
+
+#### Change-Up (Change-Up / Splitter)
+```{r Change-Up Decision Trees, echo = FALSE}
+
+rpart(formula = woba ~ pitcher_break_z + pitcher_break_x + 
+                  avg_speed + spin_rate,
+     data = changeup_reduced, method = "anova") %>%
+  rpart.plot()
+```
+
+### {-}
+
+
+```{r Faceted Exploration, warning = FALSE, message = FALSE, echo = FALSE}
+Data2 %>% 
+  ggplot(aes(x = spin_rate, y = woba, 
+             color = `Stf+ Pitch`)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = lm, se = FALSE) + 
+  facet_wrap(~ pitch_type_name) +
+  labs(x = "Spin Rate (rpm)",
+       y = "wOBA",
+       color = "Stuff+",
+       title = "Spin Rate vs. Stuff+ by Pitch Type") +
+  scale_color_gradient(low = "red", high = "green") +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05)),
+                     trans = "reverse") +
+  scale_x_continuous(labels = scales::comma) +
+  theme_dark()
+
+
+Data2 %>% 
+  ggplot(aes(x = avg_speed, y = woba, 
+             color = `Stf+ Pitch`)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = lm, se = FALSE) + 
+  facet_wrap(~ pitch_type_name) +
+  labs(x = "Average Pitch Speed (mph)",
+       y = "wOBA",
+       color = "Stuff+",
+       title = "Average Pitch Speed vs. Stuff+ by Pitch Type") +
+  scale_y_reverse() +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05)),
+                     trans = "reverse") +
+  scale_color_gradient(low = "red", high = "green") +
+  theme_dark()
+```
