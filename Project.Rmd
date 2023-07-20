@@ -1,0 +1,22 @@
+---
+title: "Final Project"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r Setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("Data.R")
+```
+
+```{r Libraries, message = FALSE}
+library(tidyverse)
+library(readxl)
+library(patchwork)
+library(kableExtra)
+library(knitr)
+library(ranger)
+library(vip)
+library(rpart)
+library(rpart.plot)
+```
