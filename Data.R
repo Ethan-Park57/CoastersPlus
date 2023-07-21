@@ -307,6 +307,9 @@ Data <- Data %>%
 Data2 <- Data2 %>% 
   select(-id)
 
+Data2 <- Data2 %>% 
+  rename(rv100 = run_value_per_100)
+
 
 # Environment Cleaning ####
 rm(data_init)

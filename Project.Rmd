@@ -265,11 +265,15 @@ rpart(formula = woba ~ pitcher_break_z + pitcher_break_x +
 ```
 
 ## Pitch-by-Pitch Breakdowns:
-##### Note that in addition to the aforementioned reclassification of pitch types, Sinkers, Cutters, and Four-Seam Fastballs have been aggregated into a singular "Fastball" category.
 
-### Variable Importance {.tabset}
-#### Sliders
-```{r Slider VIP, echo = FALSE}
+<br>
+
+### Variable Importance Plots {.tabset}
+###### Note that Sinkers, Cutters, and Four-Seam Fastballs have been aggregated into a singular "Fastball" category.
+
+#### wOBA {.tabset}
+##### Sliders
+```{r Slider wOBA VIP, echo = FALSE}
 
 slider_reduced <- Data2 %>% 
   filter(pitch_type == "SL") %>% 
@@ -282,13 +286,13 @@ slider_model <- ranger(woba ~ ., data = slider_reduced, num.trees = 1000,
 
 vip(slider_model, geom = "point") + 
   labs(title = "Reduced Model",
-       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, speed_diff") +
   theme_bw()
 
 ```
 
-#### Fastballs
-```{r Fastballs VIP, echo = FALSE}
+##### Fastballs
+```{r Fastballs wOBA VIP, echo = FALSE}
 
 fastball_reduced <- Data2 %>% 
   filter(pitch_type == "FC" | pitch_type == "FF" | pitch_type == "SI") %>% 
@@ -305,39 +309,115 @@ vip(fastball_model, geom = "point") +
 
 ```
 
-#### Curveballs
-```{r Curveballs VIP, echo = FALSE}
+##### Curveballs
+```{r Curveballs wOBA VIP, echo = FALSE}
 curveball_reduced <- Data2 %>% 
   filter(pitch_type == "CU") %>% 
-  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate) %>% 
-  filter(!is.na(spin_rate))
+  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, speed_diff) %>% 
+  filter(!is.na(spin_rate), !is.na(speed_diff))
 
 curveball_model <- ranger(woba ~ ., data = curveball_reduced, num.trees = 1000,
                       importance = "impurity") 
 
 vip(curveball_model, geom = "point") + 
   labs(title = "Reduced Model",
-       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, speed_diff") +
   theme_bw()
 
 ```
 
-#### Change-Ups
-```{r Change-Ups VIP, echo = FALSE}
+##### Change-Ups
+```{r Change-Ups wOBA VIP, echo = FALSE}
 changeup_reduced <- Data2 %>% 
   filter(pitch_type == "CH" | pitch_type == "FS") %>% 
-  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate) %>% 
-  filter(!is.na(spin_rate))
+  select(woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, speed_diff) %>% 
+  filter(!is.na(spin_rate), !is.na(speed_diff))
 
 changeup_model <- ranger(woba ~ ., data = changeup_reduced, num.trees = 1000,
                       importance = "impurity") 
 
 vip(changeup_model, geom = "point") + 
   labs(title = "Reduced Model",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, speed_diff") +
+  theme_bw()
+
+```
+
+#### {-}
+
+#### xwOBA {.tabset}
+##### Sliders
+```{r Slider xwOBA VIP, echo = FALSE}
+
+x_slider_reduced <- Data2 %>% 
+  filter(pitch_type == "SL") %>% 
+  select(est_woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, 
+         speed_diff) %>% 
+  filter(!is.na(spin_rate), !is.na(speed_diff))
+
+x_slider_model <- ranger(est_woba ~ ., data = x_slider_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(x_slider_model, geom = "point") + 
+  labs(title = "Reduced Model",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, speed_diff") +
+  theme_bw()
+
+```
+
+##### Fastballs
+```{r Fastballs xwOBA VIP, echo = FALSE}
+
+x_fastball_reduced <- Data2 %>% 
+  filter(pitch_type == "FC" | pitch_type == "FF" | pitch_type == "SI") %>% 
+  select(est_woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, pitch_type) %>% 
+  filter(!is.na(spin_rate))
+
+x_fastball_model <- ranger(est_woba ~ ., data = x_fastball_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(x_fastball_model, geom = "point") + 
+  labs(title = "Reduced Model",
        caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate") +
   theme_bw()
 
 ```
+
+##### Curveballs
+```{r Curveballs xwOBA VIP, echo = FALSE}
+x_curveball_reduced <- Data2 %>% 
+  filter(pitch_type == "CU") %>% 
+  select(est_woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, speed_diff) %>% 
+  filter(!is.na(spin_rate), !is.na(speed_diff))
+
+x_curveball_model <- ranger(est_woba ~ ., data = x_curveball_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(x_curveball_model, geom = "point") + 
+  labs(title = "Reduced Model",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, speed_diff") +
+  theme_bw()
+
+```
+
+##### Change-Ups
+```{r Change-Ups xwOBA VIP, echo = FALSE}
+x_changeup_reduced <- Data2 %>% 
+  filter(pitch_type == "CH" | pitch_type == "FS") %>% 
+  select(est_woba, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, speed_diff) %>% 
+  filter(!is.na(spin_rate), !is.na(speed_diff))
+
+x_changeup_model <- ranger(est_woba ~ ., data = x_changeup_reduced, num.trees = 1000,
+                      importance = "impurity") 
+
+vip(x_changeup_model, geom = "point") + 
+  labs(title = "Reduced Model",
+       caption = "Variables: pitcher_break_z, pitcher_break_x, avg_speed, spin_rate, speed_diff") +
+  theme_bw()
+
+```
+
+#### {-}
 
 ### {-}
 
@@ -412,8 +492,10 @@ rpart(formula = woba ~ pitcher_break_z + pitcher_break_x +
 ### {-}
 
 
-### Pitch Characteristics (wOBA) {.tabset}
-#### Sliders
+### Pitch Characteristics {.tabset}
+
+#### wOBA {.tabset}
+##### Sliders
 ```{r Sliders wOBA, warning = FALSE, message = FALSE, echo = FALSE}
 g_sl_1 <- Data2 %>% 
   filter(pitch_type == "SL") %>% 
@@ -455,7 +537,7 @@ g_sl_2 <- Data2 %>%
 grid.arrange(g_sl_1, g_sl_2, ncol = 2, top = "wOBA on Sliders by Spin Rate & Speed")
 ```
 
-#### Fastballs
+##### Fastballs
 ```{r Fastballs wOBA, warning = FALSE, message = FALSE, echo = FALSE}
 g_fb_1 <- Data2 %>% 
   filter(pitch_type == "FC" | pitch_type == "FF" | pitch_type == "SI") %>% 
@@ -497,7 +579,7 @@ g_fb_2 <- Data2 %>%
 grid.arrange(g_fb_1, g_fb_2, ncol = 2, top = "wOBA on Fastballs by Spin Rate & Speed")
 ```
 
-#### Curveballs
+##### Curveballs
 ```{r Curveballs wOBA, warning = FALSE, message = FALSE, echo = FALSE}
 g_cu_1 <- Data2 %>% 
   filter(pitch_type == "CU") %>% 
@@ -539,7 +621,7 @@ g_cu_2 <- Data2 %>%
 grid.arrange(g_cu_1, g_cu_2, ncol = 2, top = "wOBA on Curveballs by Spin Rate & Speed")
 ```
 
-#### Change-Ups
+##### Change-Ups
 ```{r Change-Ups wOBA, warning = FALSE, message = FALSE, echo = FALSE}
 g_ch_1 <- Data2 %>% 
   filter(pitch_type == "CH" | pitch_type == "FS") %>% 
@@ -581,11 +663,10 @@ g_ch_2 <- Data2 %>%
 grid.arrange(g_ch_1, g_ch_2, ncol = 2, top = "wOBA on Curveballs by Spin Rate & Speed")
 ```
 
-### {-}
+#### {-}
 
-
-### Pitch Characteristics (xwOBA) {.tabset}
-#### Sliders
+#### xwOBA {.tabset}
+##### Sliders
 ```{r Sliders xwOBA, warning = FALSE, message = FALSE, echo = FALSE}
 gx_sl_1 <- Data2 %>% 
   filter(pitch_type == "SL") %>% 
@@ -627,7 +708,7 @@ gx_sl_2 <- Data2 %>%
 grid.arrange(gx_sl_1, gx_sl_2, ncol = 2, top = "xwOBA on Sliders by Spin Rate & Speed")
 ```
 
-#### Fastballs
+##### Fastballs
 ```{r Fastballs xwOBA, warning = FALSE, message = FALSE, echo = FALSE}
 gx_fb_1 <- Data2 %>% 
   filter(pitch_type == "FC" | pitch_type == "FF" | pitch_type == "SI") %>% 
@@ -669,7 +750,7 @@ gx_fb_2 <- Data2 %>%
 grid.arrange(gx_fb_1, gx_fb_2, ncol = 2, top = "xwOBA on Fastballs by Spin Rate & Speed")
 ```
 
-#### Curveballs
+##### Curveballs
 ```{r Curveballs xwOBA, warning = FALSE, message = FALSE, echo = FALSE}
 gx_cu_1 <- Data2 %>% 
   filter(pitch_type == "CU") %>% 
@@ -711,7 +792,7 @@ gx_cu_2 <- Data2 %>%
 grid.arrange(gx_cu_1, gx_cu_2, ncol = 2, top = "xwOBA on Curveballs by Spin Rate & Speed")
 ```
 
-#### Change-Ups
+##### Change-Ups
 ```{r Change-Ups xwOBA, warning = FALSE, message = FALSE, echo = FALSE}
 gx_ch_1 <- Data2 %>% 
   filter(pitch_type == "CH" | pitch_type == "FS") %>% 
@@ -752,5 +833,7 @@ gx_ch_2 <- Data2 %>%
 
 grid.arrange(gx_ch_1, gx_ch_2, ncol = 2, top = "xwOBA on Change-Ups by Spin Rate & Speed")
 ```
+
+#### {-}
 
 ### {-}
