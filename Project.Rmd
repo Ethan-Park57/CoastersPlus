@@ -21,7 +21,7 @@ library(vip)
 library(rpart)
 library(rpart.plot)
 library(gridExtra)
-library(ggpmisc)
+library(caret)
 
 set.seed(13*38*51)
 ```
@@ -197,14 +197,12 @@ Data2 %>%
 
 ```
 
-```{r Tree Model, echo = FALSE}
-base <- Data2 %>% 
+```{r Tree of Component Variables, echo = FALSE}
+# Lots of Variables
+tree_input <- Data2 %>% 
   select(Name, year, pitch_hand:Stuff, `Stf+ Pitch`, pitcher_break_z,
          pitcher_break_x, avg_speed, spin_rate, pitches_thrown, pitch_per,
-         run_value:hard_hit_percent, fb_type:speed_diff)
-
-
-tree_input <- base %>% 
+         run_value:hard_hit_percent, fb_type:speed_diff) %>% 
   filter(!is.na(`Stf+ Pitch`), !is.na(run_value), !is.na(spin_rate),
          !is.na(fb_stuff), !is.na(fb_speed), !is.na(fb_thrown),
          !is.na(speed_diff)) %>% 
@@ -213,16 +211,6 @@ tree_input <- base %>%
   select(-est_woba, -slg, -ba, -rv100, -run_value, -est_slg,
          -est_ba)
 
-mlb_rf <- ranger(woba ~ ., data = tree_input, num.trees = 1000,
-                      importance = "impurity") 
-
-mlb_rf
-
-vip(mlb_rf, geom = "point") + theme_bw()
-```
-
-```{r Tree of Component Variables, echo = FALSE}
-# Lots of Variables
 model_data_full <- tree_input %>% 
   select(woba, pitch_stuff, pitcher_break_z, pitcher_break_x, avg_speed, spin_rate,
          pitch_per, fb_stuff, fb_thrown, speed_diff) %>% 
@@ -1047,3 +1035,102 @@ grid.arrange(gx_ch_1, gx_ch_2, ncol = 2, top = "xwOBA on Change-Ups by Spin Rate
 #### {-}
 
 ### {-}
+
+```{r Test, echo = FALSE, eval = FALSE}
+# Filtering data
+test_data <-  Data2 %>% 
+  filter(pitch_type == "SL") %>% 
+  filter(!is.na(spin_rate), !is.na(speed_diff)) %>% 
+  select(pitcher_id, woba, avg_speed, spin_rate, pitcher_break_x, pitcher_break_z, speed_diff)
+
+# Selecting train/test groups
+train_pitcher_id <- test_data %>%
+  distinct(pitcher_id) %>%
+  slice_sample(prop = 0.7)
+
+test_train <- test_data %>% 
+  filter(pitcher_id %in% train_pitcher_id$pitcher_id)
+
+test_test <- test_data %>% 
+  filter(!pitcher_id %in% train_pitcher_id$pitcher_id)
+
+
+# Random forest
+test_tune_grid <- expand.grid(mtry = 1:4,
+                              splitrule = "variance",
+                              min.node.size = 5)
+
+test_caret <- train(woba ~., data = test_train, method = "ranger",
+                    num.trees = 10000, 
+                    trControl = trainControl(method = "cv", number = 5),
+                    tuneGrid = test_tune_grid)
+
+# Scatterplot
+test_test %>% 
+  mutate(Prediction = predict(test_caret, test_test)) %>% 
+  ggplot(aes(x = woba, y = Prediction)) +
+  geom_point()
+
+# Correlation
+test_test %>% 
+  mutate(Prediction = predict(test_caret, test_test)) %>% 
+  with(cor(woba, Prediction))
+
+```
+
+```{r Delete Environment, echo = FALSE, eval = FALSE}
+rm(g_ch_1)
+rm(g_ch_2)
+rm(g_cu_1)
+rm(g_cu_2)
+rm(g_fb_1)
+rm(g_fb_2)
+rm(g_sl_1)
+rm(g_sl_2)
+
+rm(gx_ch_1)
+rm(gx_ch_2)
+rm(gx_cu_1)
+rm(gx_cu_2)
+rm(gx_fb_1)
+rm(gx_fb_2)
+rm(gx_sl_1)
+rm(gx_sl_2)
+
+rm(changeup_model)
+rm(changeup_reduced)
+rm(curveball_model)
+rm(curveball_reduced)
+rm(slider_model)
+rm(slider_reduced)
+rm(fastball_model)
+rm(fastball_reduced)
+rm(fourseam_reduced)
+rm(cutter_reduced)
+rm(sinker_reduced)
+
+rm(rv_changeup_model)
+rm(rv_changeup_reduced)
+rm(rv_curveball_model)
+rm(rv_curveball_reduced)
+rm(rv_slider_model)
+rm(rv_slider_reduced)
+rm(rv_fastball_model)
+rm(rv_fastball_reduced)
+rm(rv_fourseam_reduced)
+rm(rv_cutter_reduced)
+rm(rv_sinker_reduced)
+
+rm(x_changeup_model)
+rm(x_changeup_reduced)
+rm(x_curveball_model)
+rm(x_curveball_reduced)
+rm(x_fastball_model)
+rm(x_fastball_reduced)
+rm(x_slider_model)
+rm(x_slider_reduced)
+rm(x_fourseam_reduced)
+rm(x_cutter_reduced)
+rm(x_sinker_reduced)
+```
+
