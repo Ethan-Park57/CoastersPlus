@@ -310,6 +310,15 @@ Data2 <- Data2 %>%
 Data2 <- Data2 %>% 
   rename(rv100 = run_value_per_100)
 
+# Inter-Pitch Data ####
+
+ip <- function(url, pitch, season){
+read_csv(url) %>% 
+  mutate(pitch_type = pitch, year = season) %>% 
+  select(pitch_type, year, player_name:FC_release_pos_z_diff)}
+
+# sl_2020 <- ip("Ethan-Data/Inter-Pitch/2020/2020_SL_inter_pitch.csv", "SL", 2020)
+
 
 # Environment Cleaning ####
 rm(data_init)
