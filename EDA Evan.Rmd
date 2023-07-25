@@ -769,3 +769,44 @@ test %>%
   geom_histogram(color = "white", fill = "black", binwidth = 0.01)
 ```
 
+```{r Test, echo = FALSE, eval = FALSE}
+# Filtering data
+test_data <-  Data2 %>% 
+  filter(pitch_type == "SL") %>% 
+  filter(!is.na(spin_rate), !is.na(speed_diff)) %>% 
+  select(pitcher_id, woba, avg_speed, spin_rate, pitcher_break_x, pitcher_break_z, speed_diff)
+
+# Selecting train/test groups
+train_pitcher_id <- test_data %>%
+  distinct(pitcher_id) %>%
+  slice_sample(prop = 0.7)
+
+test_train <- test_data %>% 
+  filter(pitcher_id %in% train_pitcher_id$pitcher_id)
+
+test_test <- test_data %>% 
+  filter(!pitcher_id %in% train_pitcher_id$pitcher_id)
+
+
+# Random forest
+test_tune_grid <- expand.grid(mtry = 1:4,
+                              splitrule = "variance",
+                              min.node.size = 5)
+
+test_caret <- train(woba ~., data = test_train, method = "ranger",
+                    num.trees = 1000, 
+                    trControl = trainControl(method = "cv", number = 5),
+                    tuneGrid = test_tune_grid)
+
+# Scatterplot
+test_test %>% 
+  mutate(Prediction = predict(test_caret, test_test)) %>% 
+  ggplot(aes(x = woba, y = Prediction)) +
+  geom_point()
+
+# Correlation
+test_test %>% 
+  mutate(Prediction = predict(test_caret, test_test)) %>% 
+  with(cor(woba, Prediction))
+
+```
