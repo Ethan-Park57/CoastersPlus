@@ -170,4 +170,63 @@ library(vip)
 vip(init_mlb_rf, geom = "point") + theme_bw()
 
 ```
+```{r}
+# GAM exploration 
+
+set.seed(2004)
+
+Data2 <- Data2 %>%
+  mutate(is_train = sample(rep(0:1, length.out = nrow(Data2))))
+
+library(mgcv)
+
+init_logit_gam <- gam(est_woba ~ s(pitcher_break_z) + s(avg_speed) + s(speed_diff) +
+                        s(spin_rate),
+                      data = filter(Data2, is_train == 1),
+                      family = gaussian, method = "REML")
+
+# took out whiff and put out from above
+summary(init_logit_gam)
+
+library(gratia)
+draw(init_logit_gam)
+
+```
+
+```{r}
+# Some testing n whatnot 
+training <- Data2 %>% 
+  distinct(pitcher_id) %>% 
+  slice_sample(prop = 0.7)
+
+yes <- Data2 %>% 
+  filter(pitcher_id %in% training$pitcher_id)
+
+no <- Data2 %>% 
+  filter(!pitcher_id %in% training$pitcher_id)
+
+hi <- gam(est_woba ~ s(pitcher_break_z) + s(avg_speed) + s(speed_diff) +
+                        s(spin_rate) + s(whiff_percent) + s(put_away),
+                      data = yes,
+                      family = gaussian, method = "REML")
+
+no <- no %>% 
+  mutate(Prediction = predict(hi, no))
+
+no %>%
+  ggplot(aes(x = est_woba, y = Prediction)) +
+  geom_abline(slope = 1, intercept = 0, size = 2, color = "green") +
+  geom_point()
+
+# test_test %>% 
+#   mutate(Prediction = predict(test_caret, test_test)) %>% 
+#   ggplot(aes(x = woba, y = Prediction)) +
+#   geom_point()
+
+no %>% 
+  filter(!is.na(est_woba), !is.na(Prediction)) %>% 
+  with(cor(est_woba, Prediction))
+  
+```
+
 
