@@ -217,19 +217,39 @@ testing_here %>%
 ```
 
 ```{r}
+# R squared for xwoba with stuff plus per pitch 
+group_by_pitch <- Data2 %>% 
+  rename("stfpluspitch" = "Stf+ Pitch") %>% 
+  group_by(pitch_type)
+
+list_of_pitch_types <- group_split(group_by_pitch)
+
+# below, x is a LIST of DATA FRAMES 
+for(pitch in list_of_pitch_types){
+  
+  modelx <- lm(est_woba ~ stfpluspitch, data = pitch)
+
+  r_squared <- summary(modelx)$r.squared
+
+  plot <- pitch %>%
+    ggplot(aes(x = stfpluspitch, y = est_woba)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Add linear regression line+
+    labs(title = paste(pitch$pitch_type_name[1], ": xwOBA vs. Stuff Plus", sep = ""), x = "Stuff Plus",
+         y = "xwOBA") + 
+    annotate("text", x = 120, y = 0.48,
+             label = paste0("R-squared = ", round(r_squared, 2)))
+  
+  print(plot)
+}
+```
+
+```{r}
 # weighted GAMs for intrapitch dynamics 
 
 # pca for interpitch dynamics 
 
 # read in csvs 
 
-# r squared for xwoba with stuff plus per pitch 
-
-
-
-
-
-
 ```
-
 
