@@ -810,3 +810,53 @@ test_test %>%
   with(cor(woba, Prediction))
 
 ```
+
+```{r Classification Table FINAL, echo = FALSE, eval = FALSE}
+Stf_Class <- c("< 55", "< 70", "< 85", "< 95", " < 105", 
+              "< 115", "< 130", "< 145", "< 160", "≥ 160") %>% 
+  cbind(1:10) %>% 
+  as.data.frame()
+
+names(Stf_Class) <- c("Stf+ Range", "Class")
+Stf_Class <- Stf_Class %>% 
+  select(Class, `Stf+ Range`)
+
+stf_class_tbl <- ggplot() +
+  theme_void() +
+  annotate(geom = "table",
+           x = 2, y = 11,
+           label = list(Stf_Class))
+
+movement <- movement %>% 
+  mutate(pitch_class = 
+           case_when(
+             `Stf+ Pitch` < 55 ~ 1,
+             `Stf+ Pitch` < 70 ~ 2,
+             `Stf+ Pitch` < 85 ~ 3,
+             `Stf+ Pitch` < 95 ~ 4,
+             `Stf+ Pitch` < 105 ~ 5,
+             `Stf+ Pitch` < 115 ~ 6,
+             `Stf+ Pitch` < 130 ~ 7,
+             `Stf+ Pitch` < 145 ~ 8,
+             `Stf+ Pitch` < 160 ~ 9,
+             `Stf+ Pitch` >= 160 ~ 10))
+
+stf_class_g <- movement %>% 
+  group_by(pitch_class) %>% 
+  summarize(Count = n()) %>% 
+  as.data.frame() %>% 
+  ggplot(aes(x = pitch_class, y = Count)) + 
+  geom_col(color = "black", fill = "forestgreen") +
+  geom_label(aes(label = Count), vjust = -0.5,
+             color = "forestgreen", fill = "lightgrey", size = 3.5) +
+  scale_x_continuous(breaks = seq(1, 10, 1)) +
+  scale_y_continuous(breaks = seq(0, 600, 100), limits = c(0, 600)) +
+  theme_classic() +
+  labs(x = "Pitch Classification",
+       y = "") +
+  NULL
+
+
+stf_class_g + stf_class_tbl
+
+```
