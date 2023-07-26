@@ -227,9 +227,9 @@ list_of_pitch_types <- group_split(group_by_pitch)
 # below, x is a LIST of DATA FRAMES 
 for(pitch in list_of_pitch_types){
   
-  modelx <- lm(est_woba ~ stfpluspitch, data = pitch)
+  model <- lm(est_woba ~ stfpluspitch, data = pitch)
 
-  r_squared <- summary(modelx)$r.squared
+  r_squared <- summary(model)$r.squared
 
   plot <- pitch %>%
     ggplot(aes(x = stfpluspitch, y = est_woba)) +
