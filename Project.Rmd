@@ -175,6 +175,9 @@ g_sd2 <- Data2 %>%
   scale_x_reverse()
 
 g_sd1 / g_sd2
+
+rm(g_sd1)
+rm(g_sd2)
 ```
 
 ```{r Pitch Prop, echo = FALSE, warning = FALSE, message = FALSE}
@@ -2191,6 +2194,7 @@ grid.arrange(grv2_ch_1, grv2_ch_2, ncol = 2, top = "Run Value on Change-Ups by P
 ### {-}
 
 ```{r Delete Environment, echo = FALSE, eval = FALSE}
+# PC wOBA
 rm(g_ch_1)
 rm(g_ch_2)
 rm(g_cu_1)
@@ -2204,6 +2208,7 @@ rm(g_ff_2)
 rm(g_si_1)
 rm(g_si_2)
 
+# PC xwOBA
 rm(gx_ch_1)
 rm(gx_ch_2)
 rm(gx_cu_1)
@@ -2217,6 +2222,21 @@ rm(gx_si_2)
 rm(gx_sl_1)
 rm(gx_sl_2)
 
+# PC Run Value
+rm(grv_ch_1)
+rm(grv_ch_2)
+rm(grv_cu_1)
+rm(grv_cu_2)
+rm(grv_sl_1)
+rm(grv_sl_2)
+rm(grv_fc_1)
+rm(grv_fc_2)
+rm(grv_ff_1)
+rm(grv_ff_2)
+rm(grv_si_1)
+rm(grv_si_2)
+
+# VIP wOBA
 rm(changeup_model)
 rm(changeup_reduced)
 rm(curveball_model)
@@ -2229,18 +2249,7 @@ rm(fourseam_reduced)
 rm(cutter_reduced)
 rm(sinker_reduced)
 
-rm(rv_changeup_model)
-rm(rv_changeup_reduced)
-rm(rv_curveball_model)
-rm(rv_curveball_reduced)
-rm(rv_slider_model)
-rm(rv_slider_reduced)
-rm(rv_fastball_model)
-rm(rv_fastball_reduced)
-rm(rv_fourseam_reduced)
-rm(rv_cutter_reduced)
-rm(rv_sinker_reduced)
-
+# VIP xwOBA
 rm(x_changeup_model)
 rm(x_changeup_reduced)
 rm(x_curveball_model)
@@ -2253,9 +2262,20 @@ rm(x_fourseam_reduced)
 rm(x_cutter_reduced)
 rm(x_sinker_reduced)
 
-rm(g_sd1)
-rm(g_sd2)
+# VIP Run Value
+rm(rv_changeup_model)
+rm(rv_changeup_reduced)
+rm(rv_curveball_model)
+rm(rv_curveball_reduced)
+rm(rv_slider_model)
+rm(rv_slider_reduced)
+rm(rv_fastball_model)
+rm(rv_fastball_reduced)
+rm(rv_fourseam_reduced)
+rm(rv_cutter_reduced)
+rm(rv_sinker_reduced)
 
+# PM wOBA
 rm(g2_ch_1)
 rm(g2_ch_2)
 rm(g2_cu_1)
@@ -2269,16 +2289,32 @@ rm(g2_si_2)
 rm(g2_sl_1)
 rm(g2_sl_2)
 
-rm(grv_ch_1)
-rm(grv_ch_2)
-rm(grv_cu_1)
-rm(grv_cu_2)
-rm(grv_sl_1)
-rm(grv_sl_2)
-rm(grv_fc_1)
-rm(grv_fc_2)
-rm(grv_ff_1)
-rm(grv_ff_2)
-rm(grv_si_1)
-rm(grv_si_2)
+# PM xwOBA
+rm(gx2_ch_1)
+rm(gx2_ch_2)
+rm(gx2_cu_1)
+rm(gx2_cu_2)
+rm(gx2_fc_1)
+rm(gx2_fc_2)
+rm(gx2_ff_1)
+rm(gx2_ff_2)
+rm(gx2_si_1)
+rm(gx2_si_2)
+rm(gx2_sl_1)
+rm(gx2_sl_2)
+
+# PM Run Value
+rm(grv2_ch_1)
+rm(grv2_ch_2)
+rm(grv2_cu_1)
+rm(grv2_cu_2)
+rm(grv2_fc_1)
+rm(grv2_fc_2)
+rm(grv2_ff_1)
+rm(grv2_ff_2)
+rm(grv2_si_1)
+rm(grv2_si_2)
+rm(grv2_sl_1)
+rm(grv2_sl_2)
+
 ```
