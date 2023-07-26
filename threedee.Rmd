@@ -175,58 +175,61 @@ vip(init_mlb_rf, geom = "point") + theme_bw()
 
 set.seed(2004)
 
-Data2 <- Data2 %>%
-  mutate(is_train = sample(rep(0:1, length.out = nrow(Data2))))
+sliders <- Data2 %>% 
+  filter(pitch_type == "FF") %>% 
+  rename("stfpluspitch" = "Stf+ Pitch")
+
+help_me <- sliders %>% 
+  distinct(pitcher_id) %>% 
+  slice_sample(prop = 0.7)
+
+training_here <- sliders %>% 
+  filter(pitcher_id %in% help_me$pitcher_id)
+
+testing_here <- sliders %>% 
+  filter(!pitcher_id %in% help_me$pitcher_id)
 
 library(mgcv)
 
-init_logit_gam <- gam(est_woba ~ s(pitcher_break_z) + s(avg_speed) + s(speed_diff) +
-                        s(spin_rate),
-                      data = filter(Data2, is_train == 1),
+sliders_gam <- gam(est_woba ~ s(pitcher_break_x) + s(pitcher_break_z) +
+                     s(spin_rate) + s(avg_speed) + s(speed_diff), 
+                      data = training_here,
                       family = gaussian, method = "REML")
 
 # took out whiff and put out from above
-summary(init_logit_gam)
+summary(sliders_gam)
 
 library(gratia)
-draw(init_logit_gam)
+draw(sliders_gam)
+
+testing_here <- testing_here %>% 
+  mutate(Prediction = predict(sliders_gam, testing_here))
+
+testing_here %>%
+  ggplot(aes(x = Prediction, y = est_woba)) +
+  geom_abline(slope = 1, intercept = 0, size = 2, color = "green") +
+  geom_point()
+
+testing_here %>% 
+  filter(!is.na(est_woba), !is.na(Prediction)) %>% 
+  with(cor(est_woba, Prediction))
 
 ```
 
 ```{r}
-# Some testing n whatnot 
-training <- Data2 %>% 
-  distinct(pitcher_id) %>% 
-  slice_sample(prop = 0.7)
+# weighted GAMs for intrapitch dynamics 
 
-yes <- Data2 %>% 
-  filter(pitcher_id %in% training$pitcher_id)
+# pca for interpitch dynamics 
 
-no <- Data2 %>% 
-  filter(!pitcher_id %in% training$pitcher_id)
+# read in csvs 
 
-hi <- gam(est_woba ~ s(pitcher_break_z) + s(avg_speed) + s(speed_diff) +
-                        s(spin_rate) + s(whiff_percent) + s(put_away),
-                      data = yes,
-                      family = gaussian, method = "REML")
+# r squared for xwoba with stuff plus per pitch 
 
-no <- no %>% 
-  mutate(Prediction = predict(hi, no))
 
-no %>%
-  ggplot(aes(x = est_woba, y = Prediction)) +
-  geom_abline(slope = 1, intercept = 0, size = 2, color = "green") +
-  geom_point()
 
-# test_test %>% 
-#   mutate(Prediction = predict(test_caret, test_test)) %>% 
-#   ggplot(aes(x = woba, y = Prediction)) +
-#   geom_point()
 
-no %>% 
-  filter(!is.na(est_woba), !is.na(Prediction)) %>% 
-  with(cor(est_woba, Prediction))
-  
+
+
 ```
 
 
