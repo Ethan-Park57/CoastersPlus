@@ -131,6 +131,7 @@ league %>%
 movement %>% 
   filter(pitch_type == "CU") %>% 
   ggplot() +
+  geom_vline(xintercept = 100, color = "lightgreen", alpha = 0.75) +
   geom_histogram(aes(x = Stuff),
                  color = "white", fill = "darkgray", binwidth = 2) +
   labs(x = "Stuff+", y = "",
@@ -140,8 +141,9 @@ movement %>%
   movement %>% 
   filter(pitch_type == "CU") %>% 
   ggplot() +
+  geom_vline(xintercept = 100, color = "lightgreen", alpha = 0.75) +
   geom_histogram(aes(x = `Stf+ Pitch`), 
-                 color = "white", fill = "lightgreen", binwidth = 2) +
+                 color = "white", fill = "lightblue", binwidth = 2) +
   labs(x = "Stuff+", y = "",
        title = "Stuff+ (By Pitch)") +
   xlim(75, 200) + ylim(0, 15) +
