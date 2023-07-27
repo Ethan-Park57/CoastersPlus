@@ -1,0 +1,144 @@
+---
+title: "Ethan"
+author: "Ethan Park"
+date: "2023-07-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(mgcv)
+library(tidymodels)
+library(gratia)
+```
+
+```{r}
+statcast = read.csv('./Ethan-Data/Statcast/statcast_2020-2022.csv')
+pitch_types = c('FF', 'FC', 'CH', 'CU', 'SL', 'SI')
+
+remove_outliers <- function(df, col_names) {
+  for (col_name in col_names) {
+    Q1 <- quantile(df[[col_name]], 0.25)
+    Q3 <- quantile(df[[col_name]], 0.75)
+    
+    IQR <- Q3 - Q1
+    
+    lower_bound <- Q1 - 1.5 * IQR
+    upper_bound <- Q3 + 1.5 * IQR
+    
+    df <- df[df[[col_name]] >= lower_bound & df[[col_name]] <= upper_bound, ]
+  }
+  return(df)
+}
+
+inters = list()
+for (pitch_type in pitch_types) {
+  file_path = sprintf('./Ethan-Data/Inter-Pitch/%s_interpitch_2020-2022.csv', pitch_type)
+  df <- read.csv(file_path)
+  
+  df <- remove_outliers(df, col_names = c('est_woba', 'Stuff'))
+  
+  inters[[pitch_type]] <- df
+}
+```
+
+```{r}
+rmse <- function(observed, predicted){
+  n <- length(observed)
+  sqrt(sum((observed - predicted)^2) / n)
+}
+```
+
+```{r}
+for (pitch_type in names(inters)) {
+  set.seed(2004)
+  
+  split <- inters[[pitch_type]] %>%
+    distinct(mlbAM_ID) %>% 
+    slice_sample(prop = 0.7)
+
+  training <- inters[[pitch_type]] %>% 
+      filter(mlbAM_ID %in% split$mlbAM_ID)
+    
+  testing <- inters[[pitch_type]] %>% 
+    filter(!mlbAM_ID %in% split$mlbAM_ID)
+  
+  
+  stfplus_pitch_gam <- gam(est_woba ~ s(Stuff), 
+                 data = training, 
+                 family = gaussian, method = "REML")
+
+  stuff_predictions <- predict(stfplus_pitch_gam, newdata = testing, type = "response")
+  stuff_gam_pred <- data.frame(observed = testing$est_woba, prediction = stuff_predictions)
+  
+  print(draw(stfplus_pitch_gam, residuals = TRUE) & ggtitle(pitch_type) 
+        & xlab("Stuff+") 
+        & ylab("xwOBA Partial Effect"))
+  
+  print(stuff_gam_pred %>% 
+    ggplot(aes(x = observed, y = prediction)) +
+    geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+    geom_smooth(se = FALSE, method = lm) +
+    scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                       expand = expansion(mult = c(0, 0.05))) +
+    scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                       expand = expansion(mult = c(0, 0.05))) +
+    labs(x = "Observed",
+         y = "Predicted",
+         title = paste(pitch_type, " xwOBA GAM Predictions"),
+         caption = paste("RMSE:",
+                         round(rmse(stuff_gam_pred$observed, stuff_gam_pred$prediction), 4))) +
+    theme_dark() +
+    theme(plot.title = element_text(hjust = 0.5)))
+}
+```
+
+```{r}
+for (pitch_type in names(inters)) {
+  set.seed(2004)
+  
+  split <- inters[[pitch_type]] %>%
+    distinct(mlbAM_ID) %>% 
+    slice_sample(prop = 0.7)
+
+  training <- inters[[pitch_type]] %>% 
+      filter(mlbAM_ID %in% split$mlbAM_ID)
+    
+  testing <- inters[[pitch_type]] %>% 
+    filter(!mlbAM_ID %in% split$mlbAM_ID)
+  
+  selected_data <- training[, !(names(training) %in% c("mlbAM_ID", "Year", "player_name",
+                                                     "pitch_usage", "run_value_per_100", "index"))]
+  remaining_columns <- setdiff(names(selected_data), c("est_woba"))
+  rhs <- paste('s(', remaining_columns, ')', sep = '', collapse = ' + ')
+  fml <- paste('est_woba ~', rhs, collapse = ' ')
+  big_gam <- gam(as.formula(fml), data = selected_data, family = gaussian, method = "REML")
+  
+  big_predictions <- predict(big_gam, newdata = testing, type = "response")
+  big_gam_pred <- data.frame(observed = testing$est_woba, prediction = big_predictions)
+  
+  print(draw(big_gam, residuals = TRUE) & ggtitle(pitch_type) 
+        & xlab("Stuff+") 
+        & ylab("xwOBA Partial Effect"))
+  
+  print(big_gam_pred %>% 
+    ggplot(aes(x = observed, y = prediction)) +
+    geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+    geom_smooth(se = FALSE, method = lm) +
+    scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                       expand = expansion(mult = c(0, 0.05))) +
+    scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                       expand = expansion(mult = c(0, 0.05))) +
+    labs(x = "Observed",
+         y = "Predicted",
+         title = paste(pitch_type, " xwOBA GAM Predictions"),
+         caption = paste("RMSE:",
+                         round(rmse(big_gam_pred$observed, big_gam_pred$prediction), 4))) +
+    theme_dark() +
+    theme(plot.title = element_text(hjust = 0.5)))
+}
+```
