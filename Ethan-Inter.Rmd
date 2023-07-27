@@ -16,7 +16,7 @@ library(tidymodels)
 library(ggplot2)
 ```
 
-```{r}
+```{r, warning = FALSE}
 set.seed(2004)
 
 statcast = read.csv('./Ethan-Data/Statcast/statcast_2020-2022.csv')
