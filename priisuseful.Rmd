@@ -8,6 +8,8 @@ date: "2023-07-26"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Starting now:
+
 ```{r}
 # code for scatterplots per pitch of woba versus stuff plus: 
 library(tidyverse)
@@ -20,7 +22,19 @@ group_by_pitch <- Data2 %>%
 
 list_of_pitch_types <- group_split(group_by_pitch)
 
-# below, list_of_pitch_types is a LIST of DATA FRAMES 
+```
+
+Model 1: just basic intercepts. averages, if you will: 
+```{r}
+
+for(pitch in list_of_pitch_types){
+  print(paste(pitch$pitch_type_name[1], "xwOBA: ", mean(pitch$est_woba)))
+}
+
+```
+
+Next, some EDA with xwoba and stuff plus per pitch: 
+```{r}
 for(pitch in list_of_pitch_types){
   
   model <- lm(est_woba ~ stfpluspitch, data = pitch)
@@ -40,7 +54,7 @@ for(pitch in list_of_pitch_types){
 }
 ```
 
-Yay pri is so useful! Now for GAMs with stuff plus: 
+Model 2: GAMs with stuff plus by pitch: 
 
 ```{r}
 # below, list_of_pitch_types is a LIST of DATA FRAMES
@@ -88,7 +102,7 @@ for(pitch in list_of_pitch_types){
 
 
 ```
-
+Next, some exploring with GAMs 
 ```{r}
 for(pitch_x in list_of_pitch_types){
   set.seed(2004)
@@ -115,7 +129,10 @@ for(pitch_x in list_of_pitch_types){
   print(draw(stfplus_pitch_gam_two, residuals = TRUE) & xlab(pitch_x$pitch_type_name[1]) & ylab("xwOBA Partial Effect"))
   
   print(summary(stfplus_pitch_gam_two))
+  
 }
+
+# TO DO THURSDAY: MAYBE REVERSE THE AXES ON XWOBA SO GOING UP IS GOOD AND GOING DOWN IS BAD, LIKE EVAN DID
 ```
 
 ```{r}
@@ -127,22 +144,22 @@ for(n in list_of_pitch_types){
   speed <- ggplot(data = n, aes(x = avg_speed, y = est_woba)) +
     geom_point() +  
     geom_smooth() + 
-    ggtitle(pitch_x$pitch_type_name[1])
+    ggtitle(n$pitch_type_name[1])
   
   spin <- ggplot(data = n, aes(x = spin_rate, y = est_woba)) +
     geom_point() +
     geom_smooth() + 
-    ggtitle(pitch_x$pitch_type_name[1])
+    ggtitle(n$pitch_type_name[1])
   
   x_break <- ggplot(data = n, aes(x = pitcher_break_x, y = est_woba)) +
     geom_point() +
     geom_smooth() + 
-    ggtitle(pitch_x$pitch_type_name[1])
+    ggtitle(n$pitch_type_name[1])
   
   z_break <- ggplot(data = n, aes(x = pitcher_break_z, y = est_woba)) +
     geom_point() +
     geom_smooth() + 
-    ggtitle(pitch_x$pitch_type_name[1])
+    ggtitle(n$pitch_type_name[1])
   
   print(speed)
   print(spin)

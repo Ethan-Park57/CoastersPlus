@@ -194,7 +194,9 @@ library(mgcv)
 sliders_gam <- gam(est_woba ~ s(pitcher_break_x) + s(pitcher_break_z) +
                      s(spin_rate) + s(avg_speed) + s(speed_diff), 
                       data = training_here,
-                      family = gaussian, method = "REML")
+                      family = gaussian, method = "REML") 
+
+# above, speed differential should be factored in the interpitch dynamics 
 
 # took out whiff and put out from above
 summary(sliders_gam)
@@ -224,7 +226,7 @@ group_by_pitch <- Data2 %>%
 
 list_of_pitch_types <- group_split(group_by_pitch)
 
-# below, x is a LIST of DATA FRAMES 
+# below, list_of_pitch_types is a LIST of DATA FRAMES 
 for(pitch in list_of_pitch_types){
   
   model <- lm(est_woba ~ stfpluspitch, data = pitch)
@@ -250,6 +252,8 @@ for(pitch in list_of_pitch_types){
 # pca for interpitch dynamics 
 
 # read in csvs 
+
+
 
 ```
 
