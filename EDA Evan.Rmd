@@ -21,6 +21,11 @@ library(rpart)
 library(rpart.plot)
 ```
 
+```{r RMSE Function, echo = FALSE}
+sqrt(fit$mse[length(fit$mse)])
+```
+
+
 ```{r Slider, message = FALSE, echo = FALSE}
 movement_slider_r <- Data %>% 
   filter(pitch_type == "SL") %>% 
@@ -772,7 +777,6 @@ test %>%
 ```{r Test, echo = FALSE, eval = FALSE}
 # Filtering data
 test_data <-  Data2 %>% 
-  filter(pitch_type == "SL") %>% 
   filter(!is.na(spin_rate), !is.na(speed_diff)) %>% 
   select(pitcher_id, woba, avg_speed, spin_rate, pitcher_break_x, pitcher_break_z, speed_diff)
 
@@ -809,6 +813,7 @@ test_test %>%
   mutate(Prediction = predict(test_caret, test_test)) %>% 
   with(cor(woba, Prediction))
 
+test_caret$results$RMSE
 ```
 
 ```{r Classification Table FINAL, echo = FALSE, eval = FALSE}

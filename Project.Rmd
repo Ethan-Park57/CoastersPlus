@@ -11,6 +11,12 @@ knitr::opts_chunk$set(echo = TRUE)
 source("Data.R")
 ```
 
+```{css, echo = FALSE}
+h1, h3 {
+  text-align: center;
+}
+```
+
 ```{r Libraries, message = FALSE, echo = FALSE}
 library(tidyverse)
 library(readxl)
@@ -30,8 +36,35 @@ set.seed(13*38*51)
 <br>
 <br>
 
-#### MLB Population Averages (2020 - 2022)
-##### Note Recategorizations: 
+#### Introduction:
+Over the past few years, Major League Baseball has seen substantial shifts in
+what have traditionally been considered dominant pitches. Mets ace Justin
+Verlander remarked earlier this year that sliders haven't been performing as
+well as in the past, specifically, OPS on sliders is "the highest it's been in
+the pitch tracking years." The introduction of the sweeper, an attempt to
+clarify and designate differences between two types of sliders, and new
+evaluation metrics such as Stuff+, Location+, and Pitching+, have only added
+dimension to the evaluation of specific pitch types and are indicative of a
+growing focus on individual pitch characteristics. While the discrete qualities
+of a pitch (such as vertical / horizontal movement, velocity, and spin rate) are
+undoubtedly useful in evaluating and explaining elite pitchers, the effects that
+sequencing and in-game pitching strategy have on outcomes cannot be understated.
+Therefore, integrating inter-pitch dynamics with discrete pitch characteristics
+might more accurately model a pitcher's effectiveness. Fangraph's Stuff+ metric
+does a satisfactory job in evaluating the efficacy of a pitch based on discrete
+characteristics, but it is limited in that it fails to consider the art of
+pitch sequencing. Our motivation behind this project is to assess pitch
+effectiveness and consider how inter-pitch dynamics can enhance existing
+evaluation metrics.
+
+
+<br>
+<br>
+
+
+### MLB Population Averages (2020 - 2022):
+
+##### Note Recategorization: 
 
 ##### *"Sliders" includes Slurves and Sweepers*
 
@@ -60,13 +93,16 @@ league <- movement %>%
             "prop" =  
               weighted.mean(pitch_prop, pitches_thrown),
             "spin" =  
-              weighted.mean(spin_rate, pitches_thrown, na.rm = TRUE)) %>% 
-  as.data.frame()
+              weighted.mean(spin_rate, pitches_thrown, na.rm = TRUE),
+            "speed" =  
+              weighted.mean(avg_speed, pitches_thrown, na.rm = TRUE)) %>% 
+  as.data.frame() %>% 
+  arrange(desc(speed))
   
 league %>% 
   kable(digits = 2, align = "c",
         col.names = c("Pitch", "Horizontal", "Vertical",
-                      "Pitch Proportion", "Spin Rate")) %>% 
+                      "Pitch Proportion", "Spin Rate", "Speed")) %>% 
   kable_styling(full_width = T)
 ```
 
@@ -194,7 +230,9 @@ vip(model_reduced, geom = "point") +
   theme_bw()
 ```
 
-## Pitch-by-Pitch Breakdowns:
+<center>
+## **Pitch-by-Pitch Breakdowns:**
+</center>
 
 <br>
 
@@ -2137,6 +2175,10 @@ grid.arrange(grv2_ch_1, grv2_ch_2, ncol = 2, top = "Run Value on Change-Ups by P
 
 ### {-}
 
+
+
+
+
 ```{r Delete Environment, echo = FALSE, eval = FALSE}
 # PC wOBA
 rm(g_ch_1)
@@ -2262,4 +2304,5 @@ rm(grv2_sl_1)
 rm(grv2_sl_2)
 
 ```
+
 
