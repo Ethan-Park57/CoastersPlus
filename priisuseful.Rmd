@@ -1,0 +1,154 @@
+---
+title: "priisuseful"
+output: html_document
+date: "2023-07-26"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# code for scatterplots per pitch of woba versus stuff plus: 
+library(tidyverse)
+library(mgcv)
+library(gratia)
+
+group_by_pitch <- Data2 %>% 
+  rename("stfpluspitch" = "Stf+ Pitch") %>% 
+  group_by(pitch_type)
+
+list_of_pitch_types <- group_split(group_by_pitch)
+
+# below, list_of_pitch_types is a LIST of DATA FRAMES 
+for(pitch in list_of_pitch_types){
+  
+  model <- lm(est_woba ~ stfpluspitch, data = pitch)
+
+  r_squared <- summary(model)$r.squared
+
+  plot <- pitch %>%
+    ggplot(aes(x = stfpluspitch, y = est_woba)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Add linear regression line+
+    labs(title = paste(pitch$pitch_type_name[1], ": xwOBA vs. Stuff Plus", sep = ""), x = "Stuff Plus",
+         y = "xwOBA") + 
+    annotate("text", x = 120, y = 0.48,
+             label = paste0("R-squared = ", round(r_squared, 2)))
+  
+  print(plot)
+}
+```
+
+Yay pri is so useful! Now for GAMs with stuff plus: 
+
+```{r}
+# below, list_of_pitch_types is a LIST of DATA FRAMES
+# so pitch is a DATA FRAME containing only that specific pitch type 
+for(pitch in list_of_pitch_types){
+  set.seed(2004)
+  
+  split <- pitch %>%
+    distinct(pitcher_id) %>% 
+    slice_sample(prop = 0.7)
+  
+  training <- pitch %>% 
+    filter(pitcher_id %in% split$pitcher_id)
+  
+  testing <- pitch %>% 
+    filter(!pitcher_id %in% split$pitcher_id)
+  
+  stfplus_pitch_gam <- gam(est_woba ~ s(stfpluspitch), 
+                   data = training, 
+                   family = gaussian, method = "REML")
+  
+  print(draw(stfplus_pitch_gam, residuals = TRUE) & ggtitle(pitch$pitch_type_name[1]) & xlab("Stuff+") &
+          ylab("xwOBA Partial Effect"))
+  
+  print(summary(stfplus_pitch_gam))
+}
+
+# also want to do partial effects plots maybe for velo / break / spin rate 
+
+# above, speed differential should be factored in the interpitch dynamics 
+
+# took out whiff and put out from above
+# 
+# testing_here <- testing_here %>% 
+#   mutate(Prediction = predict(sliders_gam, testing_here))
+# 
+# testing_here %>%
+#   ggplot(aes(x = Prediction, y = est_woba)) +
+#   geom_abline(slope = 1, intercept = 0, size = 2, color = "green") +
+#   geom_point()
+# 
+# testing_here %>% 
+#   filter(!is.na(est_woba), !is.na(Prediction)) %>% 
+#   with(cor(est_woba, Prediction))
+
+
+```
+
+```{r}
+for(pitch_x in list_of_pitch_types){
+  set.seed(2004)
+  
+  pitch_x <- pitch_x %>% 
+    mutate(difference_x = pitcher_break_x - abs(league_break_x)) %>% 
+    mutate(difference_z = pitcher_break_z - abs(league_break_z))
+  
+  split_two <- pitch_x %>%
+    distinct(pitcher_id) %>% 
+    slice_sample(prop = 0.7)
+  
+  training_two <- pitch_x %>% 
+    filter(pitcher_id %in% split_two$pitcher_id)
+  
+  testing_two <- pitch_x %>% 
+    filter(!pitcher_id %in% split_two$pitcher_id)
+  
+  stfplus_pitch_gam_two <- gam(est_woba ~ s(avg_speed) + s(spin_rate) + s(difference_x) +
+                                 s(difference_z), 
+                   data = training_two, 
+                   family = gaussian, method = "REML")
+  
+  print(draw(stfplus_pitch_gam_two, residuals = TRUE) & xlab(pitch_x$pitch_type_name[1]) & ylab("xwOBA Partial Effect"))
+  
+  print(summary(stfplus_pitch_gam_two))
+}
+```
+
+```{r}
+# use geom_smooth 
+
+for(n in list_of_pitch_types){
+  set.seed(2004)
+  
+  speed <- ggplot(data = n, aes(x = avg_speed, y = est_woba)) +
+    geom_point() +  
+    geom_smooth() + 
+    ggtitle(pitch_x$pitch_type_name[1])
+  
+  spin <- ggplot(data = n, aes(x = spin_rate, y = est_woba)) +
+    geom_point() +
+    geom_smooth() + 
+    ggtitle(pitch_x$pitch_type_name[1])
+  
+  x_break <- ggplot(data = n, aes(x = pitcher_break_x, y = est_woba)) +
+    geom_point() +
+    geom_smooth() + 
+    ggtitle(pitch_x$pitch_type_name[1])
+  
+  z_break <- ggplot(data = n, aes(x = pitcher_break_z, y = est_woba)) +
+    geom_point() +
+    geom_smooth() + 
+    ggtitle(pitch_x$pitch_type_name[1])
+  
+  print(speed)
+  print(spin)
+  print(x_break)
+  print(z_break)
+}
+
+```
+
