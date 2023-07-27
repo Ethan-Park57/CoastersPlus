@@ -1,10 +1,21 @@
 ---
-title: "Final Project"
-output: html_document
-encoding: UTF-8
-author: "Ethan Park, Evan Wu, Priyanka Kaul"
-date: "28 July, 2023"
-css: font.css
+title: "The Art of Sequencing: Utilizing Inter-Pitch Dynamics to Enhance Pitch Evaluation in Major League Baseball"
+author: 
+ - Ethan Park^[University of Southern California, edpark@usc.edu], Evan Wu^[Elon University, ewu@elon.edu], Priyanka Kaul^[Harvard University, pkaul@college.harvard.edu]
+date: "July 28th, 2023"
+header-includes:
+   - \usepackage[default]{sourcesanspro}
+   - \usepackage[T1]{fontenc}
+mainfont: SourceSansPro
+output: 
+  html_document:
+    css: style.css
+    theme: spacelab
+    highlight: tango
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r Setup, include=FALSE}
@@ -39,7 +50,8 @@ set.seed(13*38*51)
 <br>
 <br>
 
-#### Introduction:
+# Introduction
+
 Over the past few years, Major League Baseball has seen substantial shifts in
 what have traditionally been considered dominant pitches. Mets ace Justin
 Verlander remarked earlier this year that sliders haven't been performing as
@@ -64,14 +76,14 @@ evaluation metrics.
 <br>
 <br>
 
-#### Data:
+# Data
 
 
 
 <br>
 <br>
 
-### MLB Population Averages (2020 - 2022):
+## Exploratory Data Analysis
 
 ##### Note Recategorization: 
 
@@ -240,7 +252,7 @@ vip(model_reduced, geom = "point") +
 ```
 
 <center>
-## **Pitch-by-Pitch Breakdowns:**
+### **Pitch-by-Pitch Breakdowns:**
 </center>
 
 <br>
