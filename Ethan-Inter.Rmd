@@ -34,15 +34,19 @@ mean_impute <- function(x) {
   return(x)
 }
 
-remove_outliers <- function(df) {
-  numeric_cols <- sapply(df, is.numeric)
-  
-  df_filtered <- df %>%
-    mutate(across(where(is.numeric), ~replace(., . < quantile(., 0.25) - 1.5 * IQR(.), NA))) %>%
-    mutate(across(where(is.numeric), ~replace(., . > quantile(., 0.75) + 1.5 * IQR(.), NA))) %>%
-    drop_na()
-  
-  return(df_filtered)
+remove_outliers <- function(df, col_names) {
+  for (col_name in col_names) {
+    Q1 <- quantile(df[[col_name]], 0.25)
+    Q3 <- quantile(df[[col_name]], 0.75)
+    
+    IQR <- Q3 - Q1
+    
+    lower_bound <- Q1 - 1.5 * IQR
+    upper_bound <- Q3 + 1.5 * IQR
+    
+    df <- df[df[[col_name]] >= lower_bound & df[[col_name]] <= upper_bound, ]
+  }
+  return(df)
 }
 
 inters = list()
@@ -50,7 +54,7 @@ for (pitch_type in pitch_types) {
   file_path = sprintf('./Ethan-Data/Inter-Pitch/%s_interpitch_2020-2022.csv', pitch_type)
   df <- read.csv(file_path)
   
-  df[, numeric_cols] <- remove_outliers(df[, numeric_cols])
+  df <- remove_outliers(df, col_names = c('est_woba', 'Stuff'))
   df <- as.data.frame(lapply(df, mean_impute))
   
   inters[[pitch_type]] <- df
