@@ -1,9 +1,22 @@
 ---
-title: "Final Project"
-output: html_document
-author: "Ethan Park, Evan Wu, Priyanka Kaul"
-date: "28 July, 2023"
+title: "The Art of Sequencing: Utilizing Inter-Pitch Dynamics to Enhance Pitch Evaluation in Major League Baseball"
+output: 
+  html_document: 
+    css: style.css 
+    theme: spacelab
+    highlight: tango 
+    toc: true
+    toc_float: true
+author: 
+ - "Ethan Park^[University of Southern California, edpark@usc.edu], Evan Wu^[Elon University, ewu@elon.edu], Priyanka Kaul^[Harvard University, pkaul@college.harvard.edu]"
+date: "July 28th, 2023"
+header-includes:
+   - \usepackage[default]{sourcesanspro}
+   - \usepackage[T1]{fontenc}
 css: font.css
+mainfont: SourceSansPro
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r Setup, include=FALSE}
@@ -36,14 +49,14 @@ set.seed(13*38*51)
 ```
 
 <br>
-<br>
 
-#### Introduction:
+# Introduction
+
 Over the past few years, Major League Baseball has seen substantial shifts in
 what have traditionally been considered dominant pitches. Mets ace Justin
 Verlander remarked earlier this year that sliders haven't been performing as
 well as in the past, specifically, OPS on sliders is "the highest it's been in
-the pitch tracking years." The introduction of the sweeper, an attempt to
+the pitch tracking years"^1^. The introduction of the sweeper, an attempt to
 clarify and designate differences between two types of sliders, and new
 evaluation metrics such as Stuff+, Location+, and Pitching+, have only added
 dimension to the evaluation of specific pitch types and are indicative of a
@@ -63,14 +76,14 @@ evaluation metrics.
 <br>
 <br>
 
-#### Data:
+# Data
 
 
 
 <br>
 <br>
 
-### MLB Population Averages (2020 - 2022):
+### Exploratory Data Analysis
 
 ##### Note Recategorization: 
 
@@ -239,7 +252,7 @@ vip(model_reduced, geom = "point") +
 ```
 
 <center>
-## **Pitch-by-Pitch Breakdowns:**
+## Intrapitch Exploratory Data Analysis
 </center>
 
 <br>
@@ -472,7 +485,7 @@ vip(rv_changeup_model, geom = "point") +
 ### {-}
 
 
-### Decision Trees {.tabset}
+## Decision Trees {.tabset}
 
 #### wOBA {.tabset}
 ##### Four-Seam
@@ -2574,5 +2587,13 @@ rm(grv2_sl_1)
 rm(grv2_sl_2)
 
 ```
+
+# Acknowledgements
+
+We would like to thank Meg Ellingwood and Shamindra Shrotriya, the lead teaching fellows for the Carnegie Mellon Summer Undergraduate Research Experience in Statistics, for their invaluable knowledge, patience, and instruction throughout this summer program. This project could not have been done without the expertise of Dr. Ron Yurko and Pirates Director of Research and Development Sean Ahmed. We are grateful to the entire Carnegie Mellon Sports Analytics Camp teaching team for helping make this project a reality.  
+
+# References 
+
+[1] Sammon, W., & Sarris, E. (2023, July 7). Fall of the slider: Why are hitters feasting on MLB’s once-deadly breaking ball? The Athletic. https://theathletic.com/4671150/2023/07/07/mlb-sliders-hitters-success/
 
 
