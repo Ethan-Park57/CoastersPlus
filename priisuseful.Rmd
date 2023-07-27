@@ -169,3 +169,36 @@ for(n in list_of_pitch_types){
 
 ```
 
+
+gam with stuff plus and um speed diff: 
+```{r}
+
+for(pitch_z in list_of_pitch_types){
+  set.seed(2004)
+  
+  pitch_z <- pitch_z %>% 
+    mutate(difference_x = pitcher_break_x - abs(league_break_x)) %>% 
+    mutate(difference_z = pitcher_break_z - abs(league_break_z))
+  
+  split_tw <- pitch_z %>%
+    distinct(pitcher_id) %>% 
+    slice_sample(prop = 0.7)
+  
+  training_tw <- pitch_z %>% 
+    filter(pitcher_id %in% split_tw$pitcher_id)
+  
+  testing_tw <- pitch_z %>% 
+    filter(!pitcher_id %in% split_tw$pitcher_id)
+  
+  stfplus_pitch_gam_tw <- gam(est_woba ~ s(stfpluspitch) + s(speed_diff), 
+                   data = training_tw, 
+                   family = gaussian, method = "REML")
+  
+  print(draw(stfplus_pitch_gam_tw, residuals = TRUE) & xlab(pitch_z$pitch_type_name[1]) & ylab("xwOBA Partial Effect"))
+  
+  print(summary(stfplus_pitch_gam_tw))
+  
+}
+
+```
+
