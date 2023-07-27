@@ -1,6 +1,7 @@
 ---
 title: "Final Project"
 output: html_document
+encoding: UTF-8
 author: "Ethan Park, Evan Wu, Priyanka Kaul"
 date: "28 July, 2023"
 css: font.css
@@ -2184,13 +2185,20 @@ grid.arrange(grv2_ch_1, grv2_ch_2, ncol = 2, top = "Run Value on Change-Ups by P
 ### {-}
 
 
-```{r GAM 2 CV, echo = FALSE, message = FALSE}
+```{r Model 2 GAM / RF CV, echo = FALSE, message = FALSE}
+# RMSE Function
+rmse <- function(observed, predicted){
+  n <- length(observed)
+  sqrt(sum((observed - predicted)^2) / n)}
+
+# Folds
 groups <- Data2 %>%
   select(pitcher_id) %>% 
   distinct(pitcher_id) %>% 
   rowwise() %>%
   mutate(group = sample(seq(1, 5, 1), 1))
 
+# GAM
 data_gam <- Data2 %>% 
   select(Name, year, pitch_type, pitch_type_name, pitcher_id, avg_speed, 
          spin_rate, pitcher_break_x, pitcher_break_z, speed_diff, `Stf+ Pitch`,
@@ -2212,9 +2220,6 @@ cv_p <- cv_p %>% mutate(prediction = predict(cv_m, cv_p)) %>%
 }
 
 
-rmse <- function(observed, predicted){
-  n <- length(observed)
-  sqrt(sum((observed - predicted)^2) / n)}
 
 
 fourseam <- rbind(cv("FF", "1"),
@@ -2277,9 +2282,97 @@ gam_pred %>%
                      trans = "reverse") +
   labs(x = "Observed",
        y = "Predicted",
-       title = "Stuff+ GAM Predictions of xwOBA",
+       title = "Intra-Pitch (Stuff+) GAM Predictions of xwOBA",
        caption = paste("RMSE:",
                        round(rmse(gam_pred$est_woba, gam_pred$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Random Forest
+data_rf <- data_gam %>% 
+  select(pitch_type, group, est_woba, stf_pitch, avg_speed, spin_rate, pitcher_break_x, pitcher_break_z)
+
+cv_rf <- function(pitch, fold){
+
+cv_d <- data_rf %>% filter(pitch_type == pitch, group != fold) %>% 
+  select(-pitch_type, -group) %>% filter(!is.na(spin_rate), !is.na(stf_pitch))
+  
+cv_m <- ranger(est_woba ~ ., data = cv_d, num.trees = 500,
+                      importance = "impurity") 
+
+cv_p <- data_rf %>% filter(pitch_type == pitch, group == fold) %>% na.omit() %>% filter(!is.na(spin_rate), !is.na(stf_pitch))
+
+preds <- predict(cv_m, cv_p) %>% as.data.frame()
+
+cv_p %>% 
+  mutate(prediction = preds[,1])
+}
+
+
+fourseam_rf <- rbind(cv_rf("FF", "1"),
+                  cv_rf("FF", "2"),
+                  cv_rf("FF", "3"),
+                  cv_rf("FF", "4"),
+                  cv_rf("FF", "5"))
+  
+cutter_rf <- rbind(cv_rf("FC", "1"),
+                cv_rf("FC", "2"),
+                cv_rf("FC", "3"),
+                cv_rf("FC", "4"),
+                cv_rf("FC", "5"))
+
+sinker_rf <- rbind(cv_rf("SI", "1"),
+                cv_rf("SI", "2"),
+                cv_rf("SI", "3"),
+                cv_rf("SI", "4"),
+                cv_rf("SI", "5"))
+  
+cutter_rf <- rbind(cv_rf("FC", "1"),
+                cv_rf("FC", "2"),
+                cv_rf("FC", "3"),
+                cv_rf("FC", "4"),
+                cv_rf("FC", "5"))
+
+slider_rf <- rbind(cv_rf("SL", "1"),
+                cv_rf("SL", "2"),
+                cv_rf("SL", "3"),
+                cv_rf("SL", "4"),
+                cv_rf("SL", "5"))
+
+curveball_rf <- rbind(cv_rf("CU", "1"),
+                   cv_rf("CU", "2"),
+                   cv_rf("CU", "3"),
+                   cv_rf("CU", "4"),
+                   cv_rf("CU", "5"))
+  
+changeup_rf <- rbind(cv_rf("CH", "1"),
+                  cv_rf("CH", "2"),
+                  cv_rf("CH", "3"),
+                  cv_rf("CH", "4"),
+                  cv_rf("CH", "5"))
+
+rf_pred <- rbind(fourseam_rf, cutter_rf, sinker_rf, slider_rf, 
+                 curveball_rf, changeup_rf)
+
+
+
+rf_pred %>% 
+  ggplot(aes(x = est_woba, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_reverse() +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05)),
+                     trans = "reverse") +
+  scale_x_reverse() +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05)),
+                     trans = "reverse") +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = "Intra-Pitch (Stuff+) Random Forest Predictions of xwOBA",
+       caption = paste("RMSE:",
+                       round(rmse(rf_pred$est_woba, rf_pred$prediction), 4))) +
   theme_dark() +
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -2377,7 +2470,7 @@ gam_pred2 %>%
                      trans = "reverse") +
   labs(x = "Observed",
        y = "Predicted",
-       title = "Intra-Pitch GAM Predictions of xwOBA",
+       title = "Inter-Pitch GAM Predictions of xwOBA",
        caption = paste("RMSE:",
                        round(rmse(gam_pred2$est_woba, gam_pred2$prediction), 4))) +
   theme_dark() +
@@ -2402,7 +2495,7 @@ curveball %>%
                      trans = "reverse") +
   labs(x = "Observed",
        y = "Predicted",
-       title = "Inter-Pitch GAM Predictions of xwOBA for Curveballs",
+       title = "Intra-Pitch GAM Predictions of xwOBA for Curveballs",
        caption = paste("RMSE:",
                        round(rmse(curveball$est_woba, curveball$prediction), 4))) +
   theme_dark() +
@@ -2422,7 +2515,7 @@ curveball2 %>%
                      trans = "reverse") +
   labs(x = "Observed",
        y = "Predicted",
-       title = "Intra-Pitch GAM Predictions of xwOBA for Curveballs",
+       title = "Inter-Pitch GAM Predictions of xwOBA for Curveballs",
        caption = paste0("Inter-Pitch RMSE: ",
                        round(rmse(curveball2$est_woba, curveball2$prediction), 4),". Intra-Pitch RMSE: ", round(rmse(curveball$est_woba, curveball$prediction), 4))) +
   theme_dark() +
