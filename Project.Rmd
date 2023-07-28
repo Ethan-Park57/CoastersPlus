@@ -3034,7 +3034,7 @@ rmse_pivot <- rmse_pivot %>%
 rmse_pivot %>% 
   ggplot(aes(x = model, y = RMSE)) +
   geom_boxplot(color = "white", show.legend = FALSE, aes(fill = model)) +
-  geom_jitter(width = 0.15, aes(color = pitch_type)) +
+  geom_jitter(width = 0, aes(color = pitch_type)) +
   theme_dark() +
   labs(x = "Model",
        color = "Pitch")
