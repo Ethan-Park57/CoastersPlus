@@ -2492,7 +2492,7 @@ cv_inter <- function(pitch, fold){
   exclude_columns <- c(exclude_columns, names(train)[grep("FF", names(train))])
   selected_data <- train[, !(names(train) %in% exclude_columns)]
   remaining_columns <- setdiff(names(selected_data), c("est_woba"))
-  rhs <- paste('s(', remaining_columns, ', k = 4)', sep = '', collapse = ' + ')
+  rhs <- paste('s(', remaining_columns, ', k = 3)', sep = '', collapse = ' + ')
   fml <- paste('est_woba ~', rhs, collapse = ' ')
 
   gam <- gam(as.formula(fml), data = train, family = gaussian, method = "REML")
@@ -2991,6 +2991,22 @@ rmse_data <- rmse_data %>%
 
 ### Model Accuracy Comparison {.tabset}
 
+#### RMSE Comparison
+```{r RMSE Comp, echo = FALSE}
+rmse_pivot <- rmse_data %>% 
+  pivot_longer(c(Intra_GAM:Inter_RF)) %>% 
+  rename(RMSE = value, model = name)
+
+rmse_pivot <- rmse_pivot %>% 
+  mutate(RMSE = as.numeric(RMSE))
+
+rmse_pivot %>% 
+  ggplot(aes(x = model, y = RMSE, fill = model)) +
+  geom_boxplot(color = "white", show.legend = FALSE) +
+  theme_dark() +
+  labs(x = "Model")
+```
+
 #### Intra-Pitch GAM
 ```{r RMSE Intra GAM, echo = FALSE}
 rmse_data %>% 
@@ -3028,22 +3044,6 @@ rmse_data %>%
        y = "RMSE",
        title = "Root Mean Squared Error for Inter-Pitch Random Forest") +
   theme_dark()
-```
-
-#### RMSE Comparison
-```{r RMSE Comp, echo = FALSE}
-rmse_pivot <- rmse_data %>% 
-  pivot_longer(c(Intra_GAM:Inter_RF)) %>% 
-  rename(RMSE = value, model = name)
-
-rmse_pivot <- rmse_pivot %>% 
-  mutate(RMSE = as.numeric(RMSE))
-
-rmse_pivot %>% 
-  ggplot(aes(x = model, y = RMSE, fill = model)) +
-  geom_boxplot(color = "white", show.legend = FALSE) +
-  theme_dark() +
-  labs(x = "Model")
 ```
 
 ### {-}
