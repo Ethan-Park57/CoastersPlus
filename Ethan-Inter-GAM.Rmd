@@ -61,6 +61,12 @@ for (pitch_type in pitch_types) {
 }
 ```
 
+```{r}
+rmse <- function(observed, predicted){
+  n <- length(observed)
+  sqrt(sum((observed - predicted)^2) / n)}
+```
+
 
 ```{r}
 cv_inter <- function(pitch, fold){
@@ -86,7 +92,7 @@ cv_inter <- function(pitch, fold){
   exclude_columns <- c(exclude_columns, names(train)[grep("FF", names(train))])
   selected_data <- train[, !(names(train) %in% exclude_columns)]
   remaining_columns <- setdiff(names(selected_data), c("est_woba"))
-  rhs <- paste('s(', remaining_columns, ', k = 4)', sep = '', collapse = ' + ')
+  rhs <- paste('s(', remaining_columns, ', k = 3)', sep = '', collapse = ' + ')
   fml <- paste('est_woba ~', rhs, collapse = ' ')
 
   gam <- gam(as.formula(fml), data = train, family = gaussian, method = "REML")
