@@ -3005,6 +3005,12 @@ rmse_pivot %>%
   geom_boxplot(color = "white", show.legend = FALSE) +
   theme_dark() +
   labs(x = "Model")
+
+rmse_pivot %>% 
+  ggplot(aes(x = pitch_type, y = RMSE, alpha = 0.5)) +
+  geom_boxplot() +
+  theme_dark() +
+  labs(x = "Model")
 ```
 
 #### Intra-Pitch GAM
