@@ -23,12 +23,6 @@ knitr::opts_chunk$set(echo = TRUE)
 source("Data.R")
 ```
 
-```{css, echo = FALSE}
-h1, h3 {
-  text-align: center;
-}
-```
-
 ```{r Libraries, message = FALSE, echo = FALSE}
 library(tidyverse)
 library(readxl)
@@ -2682,4 +2676,14 @@ rm(grv2_sl_2)
 
 ```
 
+
+```{r Rudimentary Models}
+
+Data2 %>% 
+  group_by(pitch_type_name) %>% 
+  summarize(mean(est_woba))
+
+mean(Data2$est_woba)
+
+```
 
