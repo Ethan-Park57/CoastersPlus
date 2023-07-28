@@ -40,9 +40,6 @@ library(tidymodels)
 set.seed(13*38*51)
 ```
 
-<br>
-<br>
-
 # Introduction
 
 Over the past few years, Major League Baseball has seen substantial shifts in
@@ -50,9 +47,9 @@ what have traditionally been considered the most dominant pitches. Earlier this 
 Verlander remarked that sliders haven't been performing as
 well as in the past, in fact, OPS on sliders is "the highest it's been in
 the pitch tracking years".^1^ The introduction of the sweeper, an attempt to
-clarify and designate differences between two types of sliders, and new
+designate differences between two types of sliders, and new
 evaluation metrics such as Stuff+, Location+, and Pitching+, have only added
-dimension to the evaluation of specific pitch types and are indicative of a
+dimension to the evaluation of pitch types and are indicative of a
 growing focus on individual pitch characteristics. While the discrete qualities
 of a pitch (such as movement, velocity, and spin rate) are
 undoubtedly useful in evaluating and explaining elite pitchers, the effects that
@@ -63,10 +60,6 @@ does a satisfactory job in evaluating the efficacy of a pitch based on discrete
 characteristics, but it is limited in that it fails to consider the art of
 pitch sequencing. Our motivation behind this project is to both assess current discrete 
 pitch evaluation metrics and consider how inter-pitch dynamics can enhance existing models. 
-
-
-<br>
-<br>
 
 # Data
 
@@ -2193,7 +2186,7 @@ cv_inter <- function(pitch, fold){
   exclude_columns <- c(exclude_columns, names(train)[grep("FF", names(train))])
   selected_data <- train[, !(names(train) %in% exclude_columns)]
   remaining_columns <- setdiff(names(selected_data), c("est_woba"))
-  rhs <- paste('s(', remaining_columns, ', k = 4)', sep = '', collapse = ' + ')
+  rhs <- paste('s(', remaining_columns, ', k = 3)', sep = '', collapse = ' + ')
   fml <- paste('est_woba ~', rhs, collapse = ' ')
 
   gam <- gam(as.formula(fml), data = train, family = gaussian, method = "REML")
@@ -2647,6 +2640,111 @@ CH_preds_inter_rf %>%
 ### {-}
 
 
+## Comparative
+```{r RMSE Collection, echo = FALSE}
+intra_gam <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(rmse(FF_preds$observed, FF_preds$prediction),
+    rmse(FC_preds$observed, FC_preds$prediction),
+    rmse(SI_preds$observed, SI_preds$prediction),
+    rmse(SL_preds$observed, SL_preds$prediction),
+    rmse(CU_preds$observed, CU_preds$prediction),
+    rmse(CH_preds$observed, CH_preds$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Intra_GAM" = V2)
+
+inter_gam <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(rmse(FF_preds_inter$observed, FF_preds_inter$prediction),
+    rmse(FC_preds_inter$observed, FC_preds_inter$prediction),
+    rmse(SI_preds_inter$observed, SI_preds_inter$prediction),
+    rmse(SL_preds_inter$observed, SL_preds_inter$prediction),
+    rmse(CU_preds_inter$observed, CU_preds_inter$prediction),
+    rmse(CH_preds_inter$observed, CH_preds_inter$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Inter_GAM" = V2)
+
+inter_rf <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(rmse(FF_preds_inter_rf$observed, FF_preds_inter_rf$prediction),
+    rmse(FC_preds_inter_rf$observed, FC_preds_inter_rf$prediction),
+    rmse(SI_preds_inter_rf$observed, SI_preds_inter_rf$prediction),
+    rmse(SL_preds_inter_rf$observed, SL_preds_inter_rf$prediction),
+    rmse(CU_preds_inter_rf$observed, CU_preds_inter_rf$prediction),
+    rmse(CH_preds_inter_rf$observed, CH_preds_inter_rf$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Inter_RF" = V2)
+
+rmse_data <- intra_gam %>% 
+  left_join(inter_gam, by = "pitch_type") %>% 
+  left_join(inter_rf, by = "pitch_type")
+
+rmse_data <- rmse_data %>% 
+  mutate(
+    Intra_GAM = as.numeric(Intra_GAM),
+    Inter_GAM = as.numeric(Inter_GAM),
+    Inter_RF = as.numeric(Inter_RF))
+```
+
+Now to compare the various models we've used. Both the intra-pitch (based on Stuff+) and inter-pitch (based on differentials) models were generally effective at predicting xwOBA outcome, but the central question of our project is to determine if inter-pitch metrics create an edge in overall pitch evaluation. To do this, we compared the root mean squared error (RMSE) of our various models. For each individual model, we calculated the RMSE by pitch to analyze which pitches it performed the best on. We compared the RMSEs across models through a box plot.    
+
+### Model Accuracy Comparison {.tabset}
+
+#### RMSE Comparison
+```{r RMSE Comp, echo = FALSE}
+rmse_pivot <- rmse_data %>% 
+  pivot_longer(c(Intra_GAM:Inter_RF)) %>% 
+  rename(RMSE = value, model = name)
+
+rmse_pivot <- rmse_pivot %>% 
+  mutate(RMSE = as.numeric(RMSE))
+
+rmse_pivot %>% 
+  ggplot(aes(x = model, y = RMSE, fill = model)) +
+  geom_boxplot(color = "white", show.legend = FALSE) +
+  theme_dark() +
+  labs(x = "Model")
+```
+
+#### Intra-Pitch GAM
+```{r RMSE Intra GAM, echo = FALSE}
+rmse_data %>% 
+  select(pitch_type, Intra_GAM) %>% 
+  mutate(Intra_GAM = round(Intra_GAM, 4)) %>% 
+  ggplot(aes(x = pitch_type, y = Intra_GAM, color = pitch_type)) +
+  geom_point(show.legend = FALSE, size = 2) +
+  labs(x = "Pitch",
+       y = "RMSE",
+       title = "Root Mean Squared Error for Intra-Pitch GAM") +
+  theme_dark()
+```
+
+#### Inter-Pitch GAM
+```{r RMSE Inter GAM, echo = FALSE}
+rmse_data %>% 
+  select(pitch_type, Inter_GAM) %>% 
+  mutate(Inter_GAM = round(Inter_GAM, 4)) %>% 
+  ggplot(aes(x = pitch_type, y = Inter_GAM, color = pitch_type)) +
+  geom_point(show.legend = FALSE, size = 2) +
+  labs(x = "Pitch",
+       y = "RMSE",
+       title = "Root Mean Squared Error for Inter-Pitch GAM") +
+  theme_dark()
+```
+
+#### Inter-Pitch Random Forest
+```{r RMSE Inter RF, echo = FALSE}
+rmse_data %>% 
+  select(pitch_type, Inter_RF) %>%
+  mutate(Inter_RF = round(Inter_RF, 4)) %>% 
+  ggplot(aes(x = pitch_type, y = Inter_RF, color = pitch_type)) +
+  geom_point(show.legend = FALSE, size = 2) +
+  labs(x = "Pitch",
+       y = "RMSE",
+       title = "Root Mean Squared Error for Inter-Pitch Random Forest") +
+  theme_dark()
+```
+
+### {-}
+
+
 ```{r Delete Environment, echo = FALSE, eval = FALSE}
 # PC wOBA
 rm(g_ch_1)
@@ -2774,6 +2872,13 @@ rm(grv2_sl_2)
 ```
 
 
+
+
+
+
+# Results Summary
+
+insert results here
 
 # Looking Ahead 
 
