@@ -113,6 +113,8 @@ league %>%
 
 
 Next, we turned our attention to the popular Stuff+ metric used to evaluate the success of pitches. Stuff+ factors in the discrete characteristics we've explored and more to evaluate pitchers - our question was, do pitchers know what they do well? Can Stuff+ actually predict usage? In doing this, we wanted to see if pitchers "knew" which of their pitches were most effective and threw those pitches in higher proportions. 
+
+
 ```{r Pitch Prop, echo = FALSE, warning = FALSE, message = FALSE}
 Data2 %>% 
   ggplot(aes(x = `Stf+ Pitch`, y = (pitch_per-league$prop)/league$prop,
@@ -2123,6 +2125,8 @@ CH_preds %>%
 
 ### {-}
 
+We used 5-fold cross validation to obtain our RMSE values in the above GAMs and in the following GAMs and random forests. For each pitch type, we assigned pitchers to a fold and ran the cross validation. 
+
 ## Inter-Pitch Data Analysis
 
 The next phase of our project revolves around inter-pitch interactions. We're curious to see how differentials in speed, movement, and release point, when factored in with the discrete metric Stuff+, improve our predictions on the success of a pitch. To do this, we used both generalized additive models (GAMs) and random forests. The purpose of using both was to assess whether or not these input variables interact significantly with each other, since random forests capture these interactions while GAMs do not. We are essentially "adding on" to the GAMs that previously only took into account Stuff+ in order to see how much better they do with inter-pitch characteristics. Again, our plots show how our predicted xwOBA values do against the observed values. 
@@ -2672,12 +2676,42 @@ inter_rf <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
   as.data.frame() %>% 
   rename(pitch_type = V1, "Inter_RF" = V2)
 
-rmse_data <- intra_gam %>% 
+ff <- inters[["FF"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+fc <- inters[["FC"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+ch <- inters[["CH"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+cu <- inters[["CU"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+sl <- inters[["SL"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+si <- inters[["SI"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+intercept <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(round(rmse(ff$est_woba, ff$prediction), 4),
+rmse(fc$est_woba, fc$prediction),
+rmse(si$est_woba, si$prediction),
+rmse(sl$est_woba, sl$prediction),
+rmse(cu$est_woba, cu$prediction),
+rmse(ch$est_woba, ch$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Intercept" = V2)
+
+rmse_data <- intercept %>% 
+  left_join(intra_gam, by = "pitch_type") %>% 
   left_join(inter_gam, by = "pitch_type") %>% 
   left_join(inter_rf, by = "pitch_type")
 
 rmse_data <- rmse_data %>% 
   mutate(
+    Intercept = as.numeric(Intercept),
     Intra_GAM = as.numeric(Intra_GAM),
     Inter_GAM = as.numeric(Inter_GAM),
     Inter_RF = as.numeric(Inter_RF))
@@ -2690,17 +2724,41 @@ Now to compare the various models we've used. Both the intra-pitch (based on Stu
 #### RMSE Comparison
 ```{r RMSE Comp, echo = FALSE}
 rmse_pivot <- rmse_data %>% 
-  pivot_longer(c(Intra_GAM:Inter_RF)) %>% 
+  pivot_longer(c(Intercept:Inter_RF)) %>% 
   rename(RMSE = value, model = name)
 
 rmse_pivot <- rmse_pivot %>% 
   mutate(RMSE = as.numeric(RMSE))
 
 rmse_pivot %>% 
-  ggplot(aes(x = model, y = RMSE, fill = model)) +
-  geom_boxplot(color = "white", show.legend = FALSE) +
+  mutate(pitch_type = str_replace(pitch_type, "FF", "Four-Seam"),
+         pitch_type = str_replace(pitch_type, "FC", "Cutter"),
+         pitch_type = str_replace(pitch_type, "SI", "Sinker"),
+         pitch_type = str_replace(pitch_type, "SL", "Slider"),
+         pitch_type = str_replace(pitch_type, "CU", "Curveball"),
+         pitch_type = str_replace(pitch_type, "CH", "Change-Up")) %>%
+  ggplot(aes(x = model, y = RMSE)) +
+  geom_boxplot(color = "white", show.legend = FALSE, aes(fill = model)) +
+  geom_jitter(width = 0, aes(color = pitch_type)) + 
   theme_dark() +
-  labs(x = "Model")
+  labs(x = "Model", 
+       color = "Pitch")
+
+rmse_data %>%
+  mutate(Intercept = round(Intercept, 4),
+    Intra_GAM = round(Intra_GAM, 4),
+    Inter_GAM = round(Inter_GAM, 4),
+    Inter_RF = round(Inter_RF,4)) %>% 
+  mutate(pitch_type = str_replace(pitch_type, "FF", "Four-Seam"),
+         pitch_type = str_replace(pitch_type, "FC", "Cutter"),
+         pitch_type = str_replace(pitch_type, "SI", "Sinker"),
+         pitch_type = str_replace(pitch_type, "SL", "Slider"),
+         pitch_type = str_replace(pitch_type, "CU", "Curveball"),
+         pitch_type = str_replace(pitch_type, "CH", "Change-Up")) %>% 
+  kable(digits = 4, align = "c",
+        col.names = c("Pitch", "Intercept", "Intra-Pitch GAM", 
+                      "Inter-Pitch GAM", "Inter-Pitch RF")) %>% 
+  kable_styling(full_width = T)
 ```
 
 #### Intra-Pitch GAM
@@ -2871,19 +2929,16 @@ rm(grv2_sl_2)
 
 ```
 
-
-
-
-
+<br>
 
 # Results Summary
 
-insert results here
+The comparison of our models shows that utilizing variable interactions and interpitch dynamics improves the accuracy of xwOBA predictions. While it is difficult to improve upon Stuff+, a metric that has been developed and fine-tuned for years, our layered inter-pitch models were comparable and, in some cases, more effective than GAMs that only took into account Stuff+. 
 
 # Looking Ahead 
 
-Future avenues of this project center around the inter-pitch dynamics 
-
+Our next step is to take into account the rates of pitch-pair sequences and use them as features in our models. Doing so would further integrate inter-pitch dynamics and the effect that pitch sequencing has on outcome. Next, there were extreme outliers in our models that affected our resulting RMSE and led to unrealistic xwOBA values. Looking into why these outliers exist and taking steps to adjust our predictions accordingly will lead to more consistently accurate xwOBA values. Finally, we would look into exploring models outside of GAMs since inter-pitch dynamics appear to have
+more complex relationships with xwOBA than GAMs can capture. Further adjust the tuning parameters of our models would add to their sophistication. 
 
 # Acknowledgements 
 
@@ -2892,7 +2947,18 @@ We would like to thank Meg Ellingwood and Shamindra Shrotriya, the leaders of th
 
 # Citations
 
-[1] Sammon, W., & Sarris, E. (2023, July 7). Fall of the slider: Why are hitters feasting on MLB’s once-deadly breaking ball? The Athletic. https://theathletic.com/4671150/2023/07/07/mlb-sliders-hitters-success/ 
+[1] Sammon, W., & Sarris, E. (2023, July 7). Fall of the slider: *Why are hitters feasting on MLB’s once-deadly breaking ball?* The Athletic. https://theathletic.com/4671150/2023/07/07/mlb-sliders-hitters-success/ 
+
+Major League Leaderboards "2020-2022 " Pitchers. FanGraphs Baseball. (n.d.). https://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=y&type=36&season=2022&month=0&season1=2020&ind=1&team=0&rost=0&age=0&filter=&players=0&startdate=&enddate=
+
+Sammon, W., & Sarris, E. (2023, July 7). Fall of the slider: Why are hitters feasting on MLB’s once-deadly breaking ball? The Athletic. https://theathletic.com/4671150/2023/07/07/mlb-sliders-hitters-success/ 
+
+Jldbc. (n.d.). JLDBC/Pybaseball: Pull current and historical baseball statistics using Python (Statcast, Baseball Reference, fangraphs). GitHub. https://github.com/jldbc/pybaseball 
+
+Statcast Pitch Arsenal Stats Leaderboard. baseballsavant. (n.d.). https://baseballsavant.mlb.com/leaderboard/pitch-arsenal-stats
+
+Statcast Pitch Movement Leaderboard. baseballsavant. (n.d.). https://baseballsavant.mlb.com/leaderboard/pitch-movement 
+
 
 
 
