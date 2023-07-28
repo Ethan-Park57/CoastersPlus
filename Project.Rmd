@@ -2992,7 +2992,7 @@ rmse_data <- rmse_data %>%
 ### Model Accuracy Comparison {.tabset}
 
 #### Intra-Pitch GAM
-```{r}
+```{r RMSE Intra GAM, echo = FALSE}
 rmse_data %>% 
   select(pitch_type, Intra_GAM) %>% 
   mutate(Intra_GAM = round(Intra_GAM, 4)) %>% 
@@ -3005,7 +3005,7 @@ rmse_data %>%
 ```
 
 #### Inter-Pitch GAM
-```{r}
+```{r RMSE Inter GAM, echo = FALSE}
 rmse_data %>% 
   select(pitch_type, Inter_GAM) %>% 
   mutate(Inter_GAM = round(Inter_GAM, 4)) %>% 
@@ -3018,7 +3018,7 @@ rmse_data %>%
 ```
 
 #### Inter-Pitch Random Forest
-```{r}
+```{r RMSE Inter RF, echo = FALSE}
 rmse_data %>% 
   select(pitch_type, Inter_RF) %>%
   mutate(Inter_RF = round(Inter_RF, 4)) %>% 
@@ -3031,7 +3031,7 @@ rmse_data %>%
 ```
 
 #### RMSE Comparison
-```{r}
+```{r RMSE Comp, echo = FALSE}
 rmse_pivot <- rmse_data %>% 
   pivot_longer(c(Intra_GAM:Inter_RF)) %>% 
   rename(RMSE = value, model = name)
