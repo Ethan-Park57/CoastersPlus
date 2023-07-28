@@ -70,7 +70,7 @@ cv_inter <- function(pitch, fold){
       distinct(mlbAM_ID) %>% 
       rowwise() %>%
       mutate(group = sample(seq(1, 5, 1), 1))
-    
+
     gam_data <- data %>% 
       left_join(folds, by = 'mlbAM_ID')
     

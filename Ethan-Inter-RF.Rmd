@@ -1,0 +1,256 @@
+---
+title: "Ethan-Inter-RF"
+author: "Ethan Park"
+date: "2023-07-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(mgcv)
+library(tidymodels)
+library(ggplot2)
+library(ranger)
+```
+
+```{r}
+set.seed(2004)
+
+statcast = read.csv('./Ethan-Data/Statcast/statcast_2020-2022.csv')
+pitch_types = c('FF', 'FC', 'CH', 'CU', 'SL', 'SI')
+
+mean_impute <- function(x) {
+  mean_value <- mean(x, na.rm = TRUE)
+
+  # percentage_range <- 0.03
+  # sd_value <- mean_value * percentage_range
+  # n <- sum(is.na(x))
+  # random_values <- rnorm(n, mean = mean_value, sd = sd_value)
+  x[is.na(x)] <- mean_value
+  
+  return(x)
+}
+
+remove_outliers <- function(df, col_names) {
+  for (col_name in col_names) {
+    Q1 <- quantile(df[[col_name]], 0.25)
+    Q3 <- quantile(df[[col_name]], 0.75)
+    
+    IQR <- Q3 - Q1
+    
+    lower_bound <- Q1 - 1.5 * IQR
+    upper_bound <- Q3 + 1.5 * IQR
+    
+    df <- df[df[[col_name]] >= lower_bound & df[[col_name]] <= upper_bound, ]
+  }
+  return(df)
+}
+
+inters = list()
+for (pitch_type in pitch_types) {
+  file_path = sprintf('./Ethan-Data/Inter-Pitch/%s_interpitch_2020-2022.csv', pitch_type)
+  df <- read.csv(file_path)
+  
+  df <- remove_outliers(df, col_names = c('est_woba', 'Stuff'))
+  df <- as.data.frame(lapply(df, mean_impute))
+  
+  inters[[pitch_type]] <- df
+}
+```
+```{r}
+cv_inter_rf <- function(pitch, fold){
+  prepare <- function(data) {
+    folds = data %>% 
+      select(mlbAM_ID) %>% 
+      distinct(mlbAM_ID) %>% 
+      rowwise() %>%
+      mutate(group = sample(seq(1, 5, 1), 1))
+
+    rf_data <- data %>% 
+      left_join(folds, by = 'mlbAM_ID')
+    
+    return(rf_data)
+  }
+  
+  rf_data <- prepare(inters[[pitch]])
+  
+  train <- rf_data %>% filter(group != fold)
+  test <- rf_data %>% filter(group == fold)
+  
+  exclude_columns <- c("mlbAM_ID", "Year", "player_name", "pitch_usage", "run_value_per_100", "index", "group")
+  exclude_columns <- c(exclude_columns, names(train)[grep("spin_rate", names(train))])
+  exclude_columns <- c(exclude_columns, names(train)[grep("FF", names(train))])
+  selected_data <- train[, !(names(train) %in% exclude_columns)]
+  rf <- ranger(est_woba ~ ., data = selected_data, num.trees = 500,
+                      importance = "impurity") 
+  
+  # gam <- gam(est_woba ~ s(Stuff) + s)
+  y_pred <- predict(rf, test) %>% as.data.frame()
+  
+  rf_pred_df = data.frame(observed = test$est_woba, prediction = y_pred$prediction)
+  return(rf_pred_df)
+}
+```
+
+```{r}
+FF_preds_inter_rf = data.frame()
+FF_preds_inter_rf <- rbind(cv_inter_rf("FF", "1"),
+                  cv_inter_rf("FF", "2"),
+                  cv_inter_rf("FF", "3"),
+                  cv_inter_rf("FF", "4"),
+                  cv_inter_rf("FF", "5"))
+
+FF_rmses_inter_rf <- round(rmse(FF_preds_inter_rf$observed, FF_preds_inter_rf$prediction), 4)
+
+print(FF_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("FF Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(FF_preds_inter_rf$observed, FF_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+```{r}
+FC_preds_inter_rf = data.frame()
+FC_preds_inter_rf <- rbind(cv_inter_rf("FC", "1"),
+                  cv_inter_rf("FC", "2"),
+                  cv_inter_rf("FC", "3"),
+                  cv_inter_rf("FC", "4"),
+                  cv_inter_rf("FC", "5"))
+
+FC_rmses_inter_rf <- round(rmse(FC_preds_inter_rf$observed, FC_preds_inter_rf$prediction), 4)
+
+print(FC_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("FC Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(FC_preds_inter_rf$observed, FC_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+```{r}
+SL_preds_inter_rf = data.frame()
+SL_preds_inter_rf <- rbind(cv_inter_rf("SL", "1"),
+                  cv_inter_rf("SL", "2"),
+                  cv_inter_rf("SL", "3"),
+                  cv_inter_rf("SL", "4"),
+                  cv_inter_rf("SL", "5"))
+
+SL_rmses_inter_rf <- round(rmse(SL_preds_inter_rf$observed, SL_preds_inter_rf$prediction), 4)
+
+print(SL_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("SL Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(SL_preds_inter_rf$observed, SL_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+```{r}
+SI_preds_inter_rf = data.frame()
+SI_preds_inter_rf <- rbind(cv_inter_rf("SI", "1"),
+                  cv_inter_rf("SI", "2"),
+                  cv_inter_rf("SI", "3"),
+                  cv_inter_rf("SI", "4"),
+                  cv_inter_rf("SI", "5"))
+
+SI_rmses_inter_rf <- round(rmse(SI_preds_inter_rf$observed, SI_preds_inter_rf$prediction), 4)
+
+print(SI_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("SI Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(SI_preds_inter_rf$observed, SI_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+```{r}
+CH_preds_inter_rf = data.frame()
+CH_preds_inter_rf <- rbind(cv_inter_rf("CH", "1"),
+                  cv_inter_rf("CH", "2"),
+                  cv_inter_rf("CH", "3"),
+                  cv_inter_rf("CH", "4"),
+                  cv_inter_rf("CH", "5"))
+
+CH_rmses_inter_rf <- round(rmse(CH_preds_inter_rf$observed, CH_preds_inter_rf$prediction), 4)
+
+print(CH_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("CH Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(CH_preds_inter_rf$observed, CH_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+```{r}
+CU_preds_inter_rf = data.frame()
+CU_preds_inter_rf <- rbind(cv_inter_rf("CU", "1"),
+                  cv_inter_rf("CU", "2"),
+                  cv_inter_rf("CU", "3"),
+                  cv_inter_rf("CU", "4"),
+                  cv_inter_rf("CU", "5"))
+
+CU_rmses_inter_rf <- round(rmse(CU_preds_inter_rf$observed, CU_preds_inter_rf$prediction), 4)
+
+print(CU_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("CU Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(CU_preds_inter_rf$observed, CU_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+
