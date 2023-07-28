@@ -17,12 +17,6 @@ library(ggplot2)
 ```
 
 
-```{r}
-rmse <- function(observed, predicted){
-  n <- length(observed)
-  sqrt(sum((observed - predicted)^2) / n)}
-```
-
 ```{r, warning = FALSE}
 set.seed(2004)
 
