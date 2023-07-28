@@ -2978,12 +2978,43 @@ inter_rf <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
   as.data.frame() %>% 
   rename(pitch_type = V1, "Inter_RF" = V2)
 
-rmse_data <- intra_gam %>% 
+ff <- inters[["FF"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+fc <- inters[["FC"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+ch <- inters[["CH"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+cu <- inters[["CU"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+sl <- inters[["SL"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+si <- inters[["SI"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+
+intercept <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(round(rmse(ff$est_woba, ff$prediction), 4),
+rmse(fc$est_woba, fc$prediction),
+rmse(si$est_woba, si$prediction),
+rmse(sl$est_woba, sl$prediction),
+rmse(cu$est_woba, cu$prediction),
+rmse(ch$est_woba, ch$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Intercept" = V2)
+
+rmse_data <- intercept %>% 
+  left_join(intra_gam, by = "pitch_type") %>% 
   left_join(inter_gam, by = "pitch_type") %>% 
   left_join(inter_rf, by = "pitch_type")
 
 rmse_data <- rmse_data %>% 
   mutate(
+    Intercept = as.numeric(Intercept),
     Intra_GAM = as.numeric(Intra_GAM),
     Inter_GAM = as.numeric(Inter_GAM),
     Inter_RF = as.numeric(Inter_RF))
@@ -2994,23 +3025,36 @@ rmse_data <- rmse_data %>%
 #### RMSE Comparison
 ```{r RMSE Comp, echo = FALSE}
 rmse_pivot <- rmse_data %>% 
-  pivot_longer(c(Intra_GAM:Inter_RF)) %>% 
+  pivot_longer(c(Intercept:Inter_RF)) %>% 
   rename(RMSE = value, model = name)
 
 rmse_pivot <- rmse_pivot %>% 
   mutate(RMSE = as.numeric(RMSE))
 
 rmse_pivot %>% 
-  ggplot(aes(x = model, y = RMSE, fill = model)) +
-  geom_boxplot(color = "white", show.legend = FALSE) +
+  ggplot(aes(x = model, y = RMSE)) +
+  geom_boxplot(color = "white", show.legend = FALSE, aes(fill = model)) +
+  geom_jitter(width = 0.15, aes(color = pitch_type)) +
   theme_dark() +
-  labs(x = "Model")
+  labs(x = "Model",
+       color = "Pitch")
 
-rmse_pivot %>% 
-  ggplot(aes(x = pitch_type, y = RMSE, alpha = 0.5)) +
-  geom_boxplot() +
-  theme_dark() +
-  labs(x = "Model")
+rmse_data %>%
+  mutate(Intercept = round(Intercept, 4),
+    Intra_GAM = round(Intra_GAM, 4),
+    Inter_GAM = round(Inter_GAM, 4),
+    Inter_RF = round(Inter_RF,4)) %>% 
+  mutate(pitch_type = str_replace(pitch_type, "FF", "Four-Seam"),
+         pitch_type = str_replace(pitch_type, "FC", "Cutter"),
+         pitch_type = str_replace(pitch_type, "SI", "Sinker"),
+         pitch_type = str_replace(pitch_type, "SL", "Slider"),
+         pitch_type = str_replace(pitch_type, "CU", "Curveball"),
+         pitch_type = str_replace(pitch_type, "CH", "Change-Up")) %>% 
+  kable(digits = 4, align = "c",
+        col.names = c("Pitch", "Intercept", "Intra-Pitch GAM", 
+                      "Inter-Pitch GAM", "Inter-Pitch RF")) %>% 
+  kable_styling(full_width = T)
+
 ```
 
 #### Intra-Pitch GAM
