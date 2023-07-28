@@ -1,7 +1,7 @@
 ---
 title: "The Art of Sequencing: Utilizing Inter-Pitch Dynamics to Enhance Pitch Evaluation in Major League Baseball"
 author: 
- - Ethan Park^[University of Southern California, edpark@usc.edu], Evan Wu^[Elon University, ewu@elon.edu], Priyanka Kaul^[Harvard University, pkaul@college.harvard.edu]
+ - Ethan Park^[Ethan Park, University of Southern California, edpark@usc.edu], Evan Wu^[Evan Wu, Elon University, ewu@elon.edu], Priyanka Kaul^[Priyanka Kaul, Harvard University, pkaul@college.harvard.edu]
 date: "July 28th, 2023"
 header-includes:
    - \usepackage[default]{sourcesanspro}
@@ -50,7 +50,7 @@ Over the past few years, Major League Baseball has seen substantial shifts in
 what have traditionally been considered dominant pitches. Mets ace Justin
 Verlander remarked earlier this year that sliders haven't been performing as
 well as in the past, specifically, OPS on sliders is "the highest it's been in
-the pitch tracking years." The introduction of the sweeper, an attempt to
+the pitch tracking years"^1^. The introduction of the sweeper, an attempt to
 clarify and designate differences between two types of sliders, and new
 evaluation metrics such as Stuff+, Location+, and Pitching+, have only added
 dimension to the evaluation of specific pitch types and are indicative of a
@@ -72,12 +72,7 @@ evaluation metrics.
 
 # Data
 
-
-
-<br>
-<br>
-
-## Exploratory Data Analysis
+## Exploratory Data Analysis (EDA)
 
 ##### Note Recategorization: 
 
@@ -248,10 +243,12 @@ vip(model_reduced, geom = "point") +
 ```
 
 <center>
-### **Pitch-by-Pitch Breakdowns:**
+#### **Pitch-by-Pitch Breakdowns:**
 </center>
 
 <br>
+
+## Intrapitch Exploratory Data Analysis
 
 ### Variable Importance Plots {.tabset}
 ###### Sinkers, Cutters, and Four-Seam Fastballs have been aggregated into a singular "Fastball" category.
@@ -2686,4 +2683,15 @@ Data2 %>%
 mean(Data2$est_woba)
 
 ```
+
+# Acknowledgements 
+
+We would like to thank Meg Ellingwood and Shamindra Shrotriya, the leaders of the Carnegie Mellon Summer Undergraduate Research Experience in Statistics, for their invaluable knowledge, guidance, and instruction throughout this research experience. This project would not have been possible without the help of Dr. Ron Yurko and Sean Ahmed, Pirates Director of R&D. We would like to thank the entire Carnegie Mellon Sports Analytics Camp teaching team for their support and guidance during this project.  
+
+
+# Citations
+
+[1] Sammon, W., & Sarris, E. (2023, July 7). Fall of the slider: Why are hitters feasting on MLB’s once-deadly breaking ball? The Athletic. https://theathletic.com/4671150/2023/07/07/mlb-sliders-hitters-success/ 
+
+
 
