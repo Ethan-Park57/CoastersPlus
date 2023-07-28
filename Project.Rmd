@@ -1,7 +1,7 @@
 ---
 title: "The Art of Sequencing: Utilizing Inter-Pitch Dynamics to Enhance Pitch Evaluation in Major League Baseball"
 author: 
- - Ethan Park^[University of Southern California, edpark@usc.edu], Evan Wu^[Elon University, ewu@elon.edu], Priyanka Kaul^[Harvard University, pkaul@college.harvard.edu]
+ - Ethan Park^[Ethan Park, University of Southern California, edpark@usc.edu], Evan Wu^[Evan Wu, Elon University, ewu@elon.edu], Priyanka Kaul^[Priyanka Kaul, Harvard University, pkaul@college.harvard.edu]
 date: "July 28th, 2023"
 header-includes:
    - \usepackage[default]{sourcesanspro}
@@ -23,12 +23,6 @@ knitr::opts_chunk$set(echo = TRUE)
 source("Data.R")
 ```
 
-```{css, echo = FALSE}
-h1, h3 {
-  text-align: center;
-}
-```
-
 ```{r Libraries, message = FALSE, echo = FALSE}
 library(tidyverse)
 library(readxl)
@@ -45,6 +39,12 @@ library(mgcv)
 library(tidymodels)
 
 set.seed(13*38*51)
+
+
+# RMSE Function
+rmse <- function(observed, predicted){
+  n <- length(observed)
+  sqrt(sum((observed - predicted)^2) / n)}
 ```
 
 <br>
@@ -56,7 +56,7 @@ Over the past few years, Major League Baseball has seen substantial shifts in
 what have traditionally been considered dominant pitches. Mets ace Justin
 Verlander remarked earlier this year that sliders haven't been performing as
 well as in the past, specifically, OPS on sliders is "the highest it's been in
-the pitch tracking years." The introduction of the sweeper, an attempt to
+the pitch tracking years"^1^. The introduction of the sweeper, an attempt to
 clarify and designate differences between two types of sliders, and new
 evaluation metrics such as Stuff+, Location+, and Pitching+, have only added
 dimension to the evaluation of specific pitch types and are indicative of a
@@ -78,12 +78,7 @@ evaluation metrics.
 
 # Data
 
-
-
-<br>
-<br>
-
-## Exploratory Data Analysis
+## Exploratory Data Analysis (EDA)
 
 ##### Note Recategorization: 
 
@@ -253,11 +248,6 @@ vip(model_reduced, geom = "point") +
   theme_bw()
 ```
 
-<center>
-### **Pitch-by-Pitch Breakdowns:**
-</center>
-
-<br>
 
 ### Variable Importance Plots {.tabset}
 ###### Sinkers, Cutters, and Four-Seam Fastballs have been aggregated into a singular "Fastball" category.
@@ -486,6 +476,14 @@ vip(rv_changeup_model, geom = "point") +
 
 ### {-}
 
+<center>
+#### **Pitch-by-Pitch Breakdowns:**
+</center>
+
+<br>
+
+
+## Intra-Pitch Data Analysis
 
 ### Decision Trees {.tabset}
 
@@ -2198,363 +2196,858 @@ grid.arrange(grv2_ch_1, grv2_ch_2, ncol = 2, top = "Run Value on Change-Ups by P
 
 ### {-}
 
+### Intra-Pitch xwOBA GAM {.tabset}
+```{r Intra GAM, echo = FALSE, warning = FALSE, message = FALSE}
+set.seed(2004)
 
-```{r Model 2 GAM / RF CV, echo = FALSE, message = FALSE}
-# RMSE Function
-rmse <- function(observed, predicted){
-  n <- length(observed)
-  sqrt(sum((observed - predicted)^2) / n)}
+statcast = read.csv('./Ethan-Data/Statcast/statcast_2020-2022.csv')
+pitch_types = c('FF', 'FC', 'CH', 'CU', 'SL', 'SI')
 
-# Folds
-groups <- Data2 %>%
-  select(pitcher_id) %>% 
-  distinct(pitcher_id) %>% 
-  rowwise() %>%
-  mutate(group = sample(seq(1, 5, 1), 1))
-
-# GAM
-data_gam <- Data2 %>% 
-  select(Name, year, pitch_type, pitch_type_name, pitcher_id, avg_speed, 
-         spin_rate, pitcher_break_x, pitcher_break_z, speed_diff, `Stf+ Pitch`,
-         pitch_per, whiff_percent, 
-         woba, est_woba, rv100) %>% 
-  left_join(groups, by = "pitcher_id") %>% 
-  rename(stf_pitch = `Stf+ Pitch`)
-
-cv <- function(pitch, fold){
-
-cv_d <- data_gam %>% filter(pitch_type == pitch, group != fold)
-  
-cv_m <- gam(est_woba ~ s(stf_pitch), data = cv_d, family = gaussian, method = "REML")
-
-cv_p <- data_gam %>% filter(pitch_type == pitch, group == fold)
-
-cv_p <- cv_p %>% mutate(prediction = predict(cv_m, cv_p)) %>% 
-  filter(!is.na(prediction))
+remove_outliers <- function(df, col_names) {
+  for (col_name in col_names) {
+    Q1 <- quantile(df[[col_name]], 0.25)
+    Q3 <- quantile(df[[col_name]], 0.75)
+    
+    IQR <- Q3 - Q1
+    
+    lower_bound <- Q1 - 1.5 * IQR
+    upper_bound <- Q3 + 1.5 * IQR
+    
+    df <- df[df[[col_name]] >= lower_bound & df[[col_name]] <= upper_bound, ]
+  }
+  return(df)
 }
 
+inters = list()
+for (pitch_type in pitch_types) {
+  file_path = sprintf('./Ethan-Data/Inter-Pitch/%s_interpitch_2020-2022.csv', pitch_type)
+  df <- read.csv(file_path)
+  
+  df <- remove_outliers(df, col_names = c('est_woba', 'Stuff'))
+  inters[[pitch_type]] <- df
+}
 
+cv <- function(pitch, fold){
+  prepare <- function(data) {
+    folds = data %>% 
+      select(mlbAM_ID) %>% 
+      distinct(mlbAM_ID) %>% 
+      rowwise() %>%
+      mutate(group = sample(seq(1, 5, 1), 1))
+    
+    gam_data <- data %>% 
+      left_join(folds, by = 'mlbAM_ID')
+    
+    return(gam_data)
+  }
+  
+  gam_data <- prepare(inters[[pitch]])
+  
+  train <- gam_data %>% filter(group != fold)
+  gam <- gam(est_woba ~ s(Stuff), data = train, family = gaussian, method = "REML")
+  test <- gam_data %>% filter(group == fold)
+  
+  y_pred <- test %>% mutate(prediction = predict(gam, test)) %>% 
+    filter(!is.na(prediction))
+  
+  gam_pred_df = data.frame(observed = test$est_woba, prediction = y_pred$prediction)
+  return(gam_pred_df)
+}
 
-
-fourseam <- rbind(cv("FF", "1"),
+FF_preds = data.frame()
+FF_preds <- rbind(cv("FF", "1"),
                   cv("FF", "2"),
                   cv("FF", "3"),
                   cv("FF", "4"),
                   cv("FF", "5"))
-  
-cutter <- rbind(cv("FC", "1"),
-                cv("FC", "2"),
-                cv("FC", "3"),
-                cv("FC", "4"),
-                cv("FC", "5"))
 
-sinker <- rbind(cv("SI", "1"),
-                cv("SI", "2"),
-                cv("SI", "3"),
-                cv("SI", "4"),
-                cv("SI", "5"))
-  
-cutter <- rbind(cv("FC", "1"),
-                cv("FC", "2"),
-                cv("FC", "3"),
-                cv("FC", "4"),
-                cv("FC", "5"))
+FF_rmses <- round(rmse(FF_preds$observed, FF_preds$prediction), 4)
 
-slider <- rbind(cv("SL", "1"),
-                cv("SL", "2"),
-                cv("SL", "3"),
-                cv("SL", "4"),
-                cv("SL", "5"))
 
-curveball <- rbind(cv("CU", "1"),
-                   cv("CU", "2"),
-                   cv("CU", "3"),
-                   cv("CU", "4"),
-                   cv("CU", "5"))
-  
-changeup <- rbind(cv("CH", "1"),
+FC_preds = data.frame()
+FC_preds <- rbind(cv("FC", "1"),
+                  cv("FC", "2"),
+                  cv("FC", "3"),
+                  cv("FC", "4"),
+                  cv("FC", "5"))
+
+FC_rmses <- round(rmse(FC_preds$observed, FC_preds$prediction), 4)
+
+
+CH_preds = data.frame()
+CH_preds <- rbind(cv("CH", "1"),
                   cv("CH", "2"),
                   cv("CH", "3"),
                   cv("CH", "4"),
                   cv("CH", "5"))
 
-gam_pred <- rbind(fourseam, cutter, sinker, slider, curveball, changeup)
+CH_rmses <- round(rmse(CH_preds$observed, CH_preds$prediction), 4)
 
 
+CU_preds = data.frame()
+CU_preds <- rbind(cv("CU", "1"),
+                  cv("CU", "2"),
+                  cv("CU", "3"),
+                  cv("CU", "4"),
+                  cv("CU", "5"))
 
-gam_pred %>% 
-  ggplot(aes(x = est_woba, y = prediction)) +
+CU_rmses <- round(rmse(CU_preds$observed, CU_preds$prediction), 4)
+
+
+SL_preds = data.frame()
+SL_preds <- rbind(cv("SL", "1"),
+                  cv("SL", "2"),
+                  cv("SL", "3"),
+                  cv("SL", "4"),
+                  cv("SL", "5"))
+
+SL_rmses <- round(rmse(SL_preds$observed, SL_preds$prediction), 4)
+
+
+SI_preds = data.frame()
+SI_preds <- rbind(cv("SI", "1"),
+                  cv("SI", "2"),
+                  cv("SI", "3"),
+                  cv("SI", "4"),
+                  cv("SI", "5"))
+
+SI_rmses <- round(rmse(SI_preds$observed, SI_preds$prediction), 4)
+
+```
+
+#### Four-Seam
+```{r Intra GAM Four Seams, echo = FALSE, message = FALSE}
+FF_preds %>%
+  ggplot(aes(x = observed, y = prediction)) +
   geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
   geom_smooth(se = FALSE, method = lm) +
-  scale_y_reverse() +
   scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05)),
-                     trans = "reverse") +
-  scale_x_reverse() +
+                     expand = expansion(mult = c(0, 0.05))) +
   scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05)),
-                     trans = "reverse") +
+                     expand = expansion(mult = c(0, 0.05))) +
   labs(x = "Observed",
        y = "Predicted",
-       title = "Intra-Pitch (Stuff+) GAM Predictions of xwOBA",
+       title = paste("FF xwOBA GAM Predictions"),
        caption = paste("RMSE:",
-                       round(rmse(gam_pred$est_woba, gam_pred$prediction), 4))) +
+                       round(rmse(FF_preds$observed, FF_preds$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+#### Cutters
+```{r Intra GAM Cutter, echo = FALSE, message = FALSE}
+FC_preds %>%
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = paste("FC xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(FC_preds$observed, FC_preds$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+#### Sinkers
+```{r Intra GAM Sinkers, echo = FALSE, message = FALSE}
+SI_preds %>%
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = paste("SI xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(SI_preds$observed, SI_preds$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+#### Sliders
+```{r Intra GAM Sliders, echo = FALSE, message = FALSE}
+SL_preds %>%
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = paste("SL xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(SL_preds$observed, SL_preds$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+#### Curveballs
+```{r Intra GAM Curveballs, echo = FALSE, message = FALSE}
+CU_preds %>%
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = paste("CU xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(CU_preds$observed, CU_preds$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+#### Change-Ups
+```{r Intra GAM Change-Ups, echo = FALSE, message = FALSE}
+CH_preds %>%
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = paste("CH xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(CH_preds$observed, CH_preds$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### {-}
+
+## Inter-Pitch Data Analysis
+
+### Inter-Pitch xwOBA Models {.tabset}
+
+#### GAM {.tabset}
+```{r Inter GAM, warning = FALSE, echo = FALSE, message = FALSE}
+mean_impute <- function(x) {
+  mean_value <- mean(x, na.rm = TRUE)
+  x[is.na(x)] <- mean_value
+  return(x)
+}
+
+remove_outliers <- function(df, col_names) {
+  for (col_name in col_names) {
+    Q1 <- quantile(df[[col_name]], 0.25)
+    Q3 <- quantile(df[[col_name]], 0.75)
+    
+    IQR <- Q3 - Q1
+    
+    lower_bound <- Q1 - 1.5 * IQR
+    upper_bound <- Q3 + 1.5 * IQR
+    
+    df <- df[df[[col_name]] >= lower_bound & df[[col_name]] <= upper_bound, ]
+  }
+  return(df)
+}
+
+inters = list()
+for (pitch_type in pitch_types) {
+  file_path = sprintf('./Ethan-Data/Inter-Pitch/%s_interpitch_2020-2022.csv', pitch_type)
+  df <- read.csv(file_path)
+  
+  df <- remove_outliers(df, col_names = c('est_woba', 'Stuff'))
+  df <- as.data.frame(lapply(df, mean_impute))
+  
+  inters[[pitch_type]] <- df
+}
+
+cv_inter <- function(pitch, fold){
+  prepare <- function(data) {
+    folds = data %>% 
+      select(mlbAM_ID) %>% 
+      distinct(mlbAM_ID) %>% 
+      rowwise() %>%
+      mutate(group = sample(seq(1, 5, 1), 1))
+
+    gam_data <- data %>% 
+      left_join(folds, by = 'mlbAM_ID')
+    
+    return(gam_data)
+  }
+  
+  gam_data <- prepare(inters[[pitch]])
+  
+  train <- gam_data %>% filter(group != fold)
+  
+  exclude_columns <- c("mlbAM_ID", "Year", "player_name", "pitch_usage", "run_value_per_100", "index")
+  exclude_columns <- c(exclude_columns, names(train)[grep("spin_rate", names(train))])
+  exclude_columns <- c(exclude_columns, names(train)[grep("FF", names(train))])
+  selected_data <- train[, !(names(train) %in% exclude_columns)]
+  remaining_columns <- setdiff(names(selected_data), c("est_woba"))
+  rhs <- paste('s(', remaining_columns, ', k = 4)', sep = '', collapse = ' + ')
+  fml <- paste('est_woba ~', rhs, collapse = ' ')
+
+  gam <- gam(as.formula(fml), data = train, family = gaussian, method = "REML")
+  
+  # gam <- gam(est_woba ~ s(Stuff) + s)
+  test <- gam_data %>% filter(group == fold)
+  y_pred <- test %>% mutate(prediction = predict(gam, test)) %>% 
+    filter(!is.na(prediction))
+  
+  gam_pred_df = data.frame(observed = test$est_woba, prediction = y_pred$prediction)
+  return(gam_pred_df)
+}
+
+FF_preds_inter = data.frame()
+FF_preds_inter <- rbind(cv_inter("FF", "1"),
+                  cv_inter("FF", "2"),
+                  cv_inter("FF", "3"),
+                  cv_inter("FF", "4"),
+                  cv_inter("FF", "5"))
+
+FF_rmses_inter <- round(rmse(FF_preds_inter$observed, FF_preds_inter$prediction), 4)
+
+
+
+FC_preds_inter = data.frame()
+FC_preds_inter <- rbind(cv_inter("FC", "1"),
+                  cv_inter("FC", "2"),
+                  cv_inter("FC", "3"),
+                  cv_inter("FC", "4"),
+                  cv_inter("FC", "5"))
+
+FC_rmses_inter <- round(rmse(FC_preds_inter$observed, FC_preds_inter$prediction), 4)
+
+
+SL_preds_inter = data.frame()
+SL_preds_inter <- rbind(cv_inter("SL", "1"),
+                  cv_inter("SL", "2"),
+                  cv_inter("SL", "3"),
+                  cv_inter("SL", "4"),
+                  cv_inter("SL", "5"))
+
+SL_rmses_inter <- round(rmse(SL_preds_inter$observed, SL_preds_inter$prediction), 4)
+
+
+SI_preds_inter = data.frame()
+SI_preds_inter <- rbind(cv_inter("SI", "1"),
+                  cv_inter("SI", "2"),
+                  cv_inter("SI", "3"),
+                  cv_inter("SI", "4"),
+                  cv_inter("SI", "5"))
+
+SI_rmses_inter <- round(rmse(SI_preds_inter$observed, SI_preds_inter$prediction), 4)
+
+
+
+SI_preds_inter = data.frame()
+SI_preds_inter <- rbind(cv_inter("SI", "1"),
+                  cv_inter("SI", "2"),
+                  cv_inter("SI", "3"),
+                  cv_inter("SI", "4"),
+                  cv_inter("SI", "5"))
+
+SI_rmses_inter <- round(rmse(SI_preds_inter$observed, SI_preds_inter$prediction), 4)
+
+
+
+CH_preds_inter = data.frame()
+CH_preds_inter <- rbind(cv_inter("CH", "1"),
+                  cv_inter("CH", "2"),
+                  cv_inter("CH", "3"),
+                  cv_inter("CH", "4"),
+                  cv_inter("CH", "5"))
+
+CH_rmses_inter <- round(rmse(CH_preds_inter$observed, CH_preds_inter$prediction), 4)
+
+
+CU_preds_inter = data.frame()
+CU_preds_inter <- rbind(cv_inter("CU", "1"),
+                  cv_inter("CU", "2"),
+                  cv_inter("CU", "3"),
+                  cv_inter("CU", "4"),
+                  cv_inter("CU", "5"))
+
+CU_rmses_inter <- round(rmse(CU_preds_inter$observed, CU_preds_inter$prediction), 4)
+```
+
+##### Four-Seams
+```{r Inter GAM Four Seams, echo = FALSE, message = FALSE, warning = FALSE}
+FF_preds_inter %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("FF Inter-Pitch xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(FF_preds_inter$observed, FF_preds_inter$prediction), 4))) +
   theme_dark() +
   theme(plot.title = element_text(hjust = 0.5))
 
-# Random Forest
-data_rf <- data_gam %>% 
-  select(pitch_type, group, est_woba, stf_pitch, avg_speed, spin_rate, pitcher_break_x, pitcher_break_z)
+```
 
-cv_rf <- function(pitch, fold){
+##### Cutters
+```{r Inter GAM Cutters, echo = FALSE, message = FALSE, warning = FALSE}
+FC_preds_inter %>%
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = paste("FC Inter-Pitch xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(FC_preds_inter$observed, FC_preds_inter$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
 
-cv_d <- data_rf %>% filter(pitch_type == pitch, group != fold) %>% 
-  select(-pitch_type, -group) %>% filter(!is.na(spin_rate), !is.na(stf_pitch))
+##### Sinkers
+```{r Inter GAM Sinkers, echo = FALSE, message = FALSE, warning = FALSE}
+SI_preds_inter %>%
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = paste("SI Inter-Pitch xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(SI_preds_inter$observed, SI_preds_inter$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+##### Sliders
+```{r Inter GAM Sliders, echo = FALSE, message = FALSE, warning = FALSE}
+SL_preds_inter %>%
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = paste("SL Inter-Pitch xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(SL_preds_inter$observed, SL_preds_inter$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+##### Curveballs
+```{r Inter GAM Curveballs, echo = FALSE, message = FALSE, warning = FALSE}
+CU_preds_inter %>%
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = paste("CU Inter-Pitch xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(CU_preds_inter$observed, CU_preds_inter$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+##### Change-Ups
+```{r Inter GAM Change-Up, echo = FALSE, message = FALSE, warning = FALSE}
+
+CH_preds_inter %>%
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Observed",
+       y = "Predicted",
+       title = paste("CH Inter-Pitch xwOBA GAM Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(CH_preds_inter$observed, CH_preds_inter$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+#### {-}
+
+#### Random Forest {.tabset}
+```{r Inter RF, warning = FALSE, echo = FALSE, message = FALSE}
+remove_outliers <- function(df, col_names) {
+  for (col_name in col_names) {
+    Q1 <- quantile(df[[col_name]], 0.25)
+    Q3 <- quantile(df[[col_name]], 0.75)
+    
+    IQR <- Q3 - Q1
+    
+    lower_bound <- Q1 - 1.5 * IQR
+    upper_bound <- Q3 + 1.5 * IQR
+    
+    df <- df[df[[col_name]] >= lower_bound & df[[col_name]] <= upper_bound, ]
+  }
+  return(df)
+}
+
+inters = list()
+for (pitch_type in pitch_types) {
+  file_path = sprintf('./Ethan-Data/Inter-Pitch/%s_interpitch_2020-2022.csv', pitch_type)
+  df <- read.csv(file_path)
   
-cv_m <- ranger(est_woba ~ ., data = cv_d, num.trees = 500,
+  df <- remove_outliers(df, col_names = c('est_woba', 'Stuff'))
+  df <- as.data.frame(lapply(df, mean_impute))
+  
+  inters[[pitch_type]] <- df
+}
+
+
+cv_inter_rf <- function(pitch, fold){
+  prepare <- function(data) {
+    folds = data %>% 
+      select(mlbAM_ID) %>% 
+      distinct(mlbAM_ID) %>% 
+      rowwise() %>%
+      mutate(group = sample(seq(1, 5, 1), 1))
+
+    rf_data <- data %>% 
+      left_join(folds, by = 'mlbAM_ID')
+    
+    return(rf_data)
+  }
+  
+  rf_data <- prepare(inters[[pitch]])
+  
+  train <- rf_data %>% filter(group != fold)
+  test <- rf_data %>% filter(group == fold)
+  
+  exclude_columns <- c("mlbAM_ID", "Year", "player_name", "pitch_usage", "run_value_per_100", "index", "group")
+  exclude_columns <- c(exclude_columns, names(train)[grep("spin_rate", names(train))])
+  exclude_columns <- c(exclude_columns, names(train)[grep("FF", names(train))])
+  selected_data <- train[, !(names(train) %in% exclude_columns)]
+  rf <- ranger(est_woba ~ ., data = selected_data, num.trees = 500,
                       importance = "impurity") 
-
-cv_p <- data_rf %>% filter(pitch_type == pitch, group == fold) %>% na.omit() %>% filter(!is.na(spin_rate), !is.na(stf_pitch))
-
-preds <- predict(cv_m, cv_p) %>% as.data.frame()
-
-cv_p %>% 
-  mutate(prediction = preds[,1])
+  
+  # gam <- gam(est_woba ~ s(Stuff) + s)
+  y_pred <- predict(rf, test) %>% as.data.frame()
+  
+  rf_pred_df = data.frame(observed = test$est_woba, prediction = y_pred$prediction)
+  return(rf_pred_df)
 }
 
+FF_preds_inter_rf = data.frame()
+FF_preds_inter_rf <- rbind(cv_inter_rf("FF", "1"),
+                  cv_inter_rf("FF", "2"),
+                  cv_inter_rf("FF", "3"),
+                  cv_inter_rf("FF", "4"),
+                  cv_inter_rf("FF", "5"))
 
-fourseam_rf <- rbind(cv_rf("FF", "1"),
-                  cv_rf("FF", "2"),
-                  cv_rf("FF", "3"),
-                  cv_rf("FF", "4"),
-                  cv_rf("FF", "5"))
-  
-cutter_rf <- rbind(cv_rf("FC", "1"),
-                cv_rf("FC", "2"),
-                cv_rf("FC", "3"),
-                cv_rf("FC", "4"),
-                cv_rf("FC", "5"))
-
-sinker_rf <- rbind(cv_rf("SI", "1"),
-                cv_rf("SI", "2"),
-                cv_rf("SI", "3"),
-                cv_rf("SI", "4"),
-                cv_rf("SI", "5"))
-  
-cutter_rf <- rbind(cv_rf("FC", "1"),
-                cv_rf("FC", "2"),
-                cv_rf("FC", "3"),
-                cv_rf("FC", "4"),
-                cv_rf("FC", "5"))
-
-slider_rf <- rbind(cv_rf("SL", "1"),
-                cv_rf("SL", "2"),
-                cv_rf("SL", "3"),
-                cv_rf("SL", "4"),
-                cv_rf("SL", "5"))
-
-curveball_rf <- rbind(cv_rf("CU", "1"),
-                   cv_rf("CU", "2"),
-                   cv_rf("CU", "3"),
-                   cv_rf("CU", "4"),
-                   cv_rf("CU", "5"))
-  
-changeup_rf <- rbind(cv_rf("CH", "1"),
-                  cv_rf("CH", "2"),
-                  cv_rf("CH", "3"),
-                  cv_rf("CH", "4"),
-                  cv_rf("CH", "5"))
-
-rf_pred <- rbind(fourseam_rf, cutter_rf, sinker_rf, slider_rf, 
-                 curveball_rf, changeup_rf)
+FF_rmses_inter_rf <- round(rmse(FF_preds_inter_rf$observed, FF_preds_inter_rf$prediction), 4)
 
 
 
-rf_pred %>% 
-  ggplot(aes(x = est_woba, y = prediction)) +
-  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
-  geom_smooth(se = FALSE, method = lm) +
-  scale_y_reverse() +
-  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05)),
-                     trans = "reverse") +
-  scale_x_reverse() +
-  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05)),
-                     trans = "reverse") +
-  labs(x = "Observed",
-       y = "Predicted",
-       title = "Intra-Pitch (Stuff+) Random Forest Predictions of xwOBA",
-       caption = paste("RMSE:",
-                       round(rmse(rf_pred$est_woba, rf_pred$prediction), 4))) +
-  theme_dark() +
-  theme(plot.title = element_text(hjust = 0.5))
 
+FC_preds_inter_rf = data.frame()
+FC_preds_inter_rf <- rbind(cv_inter_rf("FC", "1"),
+                  cv_inter_rf("FC", "2"),
+                  cv_inter_rf("FC", "3"),
+                  cv_inter_rf("FC", "4"),
+                  cv_inter_rf("FC", "5"))
 
-rmse(gam_pred$est_woba, gam_pred$prediction)
-```
-
-```{r GAM 3 CV, echo = FALSE, message = FALSE}
-data_gam <- Data2 %>%
-  mutate(fb_prop = fb_thrown/total_pitches) %>% 
-  mutate(pr = pitch_per/fb_prop) %>% 
-  select(Name, year, pitch_type, pitch_type_name, pitcher_id, avg_speed, 
-         spin_rate, pitcher_break_x, pitcher_break_z, speed_diff, `Stf+ Pitch`,
-         pitch_per, whiff_percent, 
-         woba, est_woba, rv100, pr, speed_diff, whiff_percent) %>% 
-  left_join(groups, by = "pitcher_id") %>% 
-  rename(stf_pitch = `Stf+ Pitch`)
-
-cv2 <- function(pitch, fold){
-
-cv_d <- data_gam %>% filter(pitch_type == pitch, group != fold)
-  
-cv_m <- gam(est_woba ~ s(stf_pitch) + s(speed_diff) + s(pr) + s(whiff_percent),
-            data = cv_d, family = gaussian, method = "REML")
-
-cv_p <- data_gam %>% filter(pitch_type == pitch, group == fold)
-
-cv_p <- cv_p %>% mutate(prediction = predict(cv_m, cv_p)) %>% 
-  filter(!is.na(prediction))
-}
-
-
-rmse <- function(observed, predicted){
-  n <- length(observed)
-  sqrt(sum((observed - predicted)^2) / n)}
-
-
-fourseam2 <- rbind(cv2("FF", "1"),
-                  cv2("FF", "2"),
-                  cv2("FF", "3"),
-                  cv2("FF", "4"),
-                  cv2("FF", "5"))
-  
-cutter2 <- rbind(cv2("FC", "1"),
-                cv2("FC", "2"),
-                cv2("FC", "3"),
-                cv2("FC", "4"),
-                cv2("FC", "5"))
-
-sinker2 <- rbind(cv2("SI", "1"),
-                cv2("SI", "2"),
-                cv2("SI", "3"),
-                cv2("SI", "4"),
-                cv2("SI", "5"))
-  
-cutter2 <- rbind(cv2("FC", "1"),
-                cv2("FC", "2"),
-                cv2("FC", "3"),
-                cv2("FC", "4"),
-                cv2("FC", "5"))
-
-slider2 <- rbind(cv2("SL", "1"),
-                cv2("SL", "2"),
-                cv2("SL", "3"),
-                cv2("SL", "4"),
-                cv2("SL", "5"))
-
-curveball2 <- rbind(cv2("CU", "1"),
-                   cv2("CU", "2"),
-                   cv2("CU", "3"),
-                   cv2("CU", "4"),
-                   cv2("CU", "5"))
-  
-changeup2 <- rbind(cv2("CH", "1"),
-                  cv2("CH", "2"),
-                  cv2("CH", "3"),
-                  cv2("CH", "4"),
-                  cv2("CH", "5"))
-
-gam_pred2 <- rbind(fourseam2, cutter2, sinker2, slider2, curveball2, changeup2)
+FC_rmses_inter_rf <- round(rmse(FC_preds_inter_rf$observed, FC_preds_inter_rf$prediction), 4)
 
 
 
-gam_pred2 %>% 
-  ggplot(aes(x = est_woba, y = prediction)) +
-  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
-  geom_smooth(se = FALSE, method = lm) +
-  scale_y_reverse() +
-  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05)),
-                     trans = "reverse") +
-  scale_x_reverse() +
-  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05)),
-                     trans = "reverse") +
-  labs(x = "Observed",
-       y = "Predicted",
-       title = "Inter-Pitch GAM Predictions of xwOBA",
-       caption = paste("RMSE:",
-                       round(rmse(gam_pred2$est_woba, gam_pred2$prediction), 4))) +
-  theme_dark() +
-  theme(plot.title = element_text(hjust = 0.5))
+SL_preds_inter_rf = data.frame()
+SL_preds_inter_rf <- rbind(cv_inter_rf("SL", "1"),
+                  cv_inter_rf("SL", "2"),
+                  cv_inter_rf("SL", "3"),
+                  cv_inter_rf("SL", "4"),
+                  cv_inter_rf("SL", "5"))
 
-
-rmse(gam_pred$est_woba, gam_pred$prediction)
+SL_rmses_inter_rf <- round(rmse(SL_preds_inter_rf$observed, SL_preds_inter_rf$prediction), 4)
 
 
 
-curveball %>% 
-  ggplot(aes(x = est_woba, y = prediction)) +
-  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
-  geom_smooth(se = FALSE, method = lm) +
-  scale_y_reverse() +
-  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05)),
-                     trans = "reverse") +
-  scale_x_reverse() +
-  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05)),
-                     trans = "reverse") +
-  labs(x = "Observed",
-       y = "Predicted",
-       title = "Intra-Pitch GAM Predictions of xwOBA for Curveballs",
-       caption = paste("RMSE:",
-                       round(rmse(curveball$est_woba, curveball$prediction), 4))) +
-  theme_dark() +
-  theme(plot.title = element_text(hjust = 0.5))
+SI_preds_inter_rf = data.frame()
+SI_preds_inter_rf <- rbind(cv_inter_rf("SI", "1"),
+                  cv_inter_rf("SI", "2"),
+                  cv_inter_rf("SI", "3"),
+                  cv_inter_rf("SI", "4"),
+                  cv_inter_rf("SI", "5"))
 
-curveball2 %>% 
-  ggplot(aes(x = est_woba, y = prediction)) +
-  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
-  geom_smooth(se = FALSE, method = lm) +
-  scale_y_reverse() +
-  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05)),
-                     trans = "reverse") +
-  scale_x_reverse() +
-  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05)),
-                     trans = "reverse") +
-  labs(x = "Observed",
-       y = "Predicted",
-       title = "Inter-Pitch GAM Predictions of xwOBA for Curveballs",
-       caption = paste0("Inter-Pitch RMSE: ",
-                       round(rmse(curveball2$est_woba, curveball2$prediction), 4),". Intra-Pitch RMSE: ", round(rmse(curveball$est_woba, curveball$prediction), 4))) +
-  theme_dark() +
-  theme(plot.title = element_text(hjust = 0.5))
+SI_rmses_inter_rf <- round(rmse(SI_preds_inter_rf$observed, SI_preds_inter_rf$prediction), 4)
 
 
-rmse(slider$est_woba, slider$prediction)
-rmse(slider2$est_woba, slider2$prediction)
 
-rmse(curveball$est_woba, curveball$prediction)
-rmse(curveball2$est_woba, curveball2$prediction)
+CH_preds_inter_rf = data.frame()
+CH_preds_inter_rf <- rbind(cv_inter_rf("CH", "1"),
+                  cv_inter_rf("CH", "2"),
+                  cv_inter_rf("CH", "3"),
+                  cv_inter_rf("CH", "4"),
+                  cv_inter_rf("CH", "5"))
 
-rmse(fourseam$est_woba, fourseam$prediction)
-rmse(fourseam2$est_woba, fourseam2$prediction)
+CH_rmses_inter_rf <- round(rmse(CH_preds_inter_rf$observed, CH_preds_inter_rf$prediction), 4)
 
-rmse(cutter$est_woba, cutter$prediction)
-rmse(cutter2$est_woba, cutter2$prediction)
 
-rmse(changeup$est_woba, changeup$prediction)
-rmse(changeup2$est_woba, changeup2$prediction)
 
-rmse(sinker$est_woba, sinker$prediction)
-rmse(sinker2$est_woba, sinker2$prediction)
+CU_preds_inter_rf = data.frame()
+CU_preds_inter_rf <- rbind(cv_inter_rf("CU", "1"),
+                  cv_inter_rf("CU", "2"),
+                  cv_inter_rf("CU", "3"),
+                  cv_inter_rf("CU", "4"),
+                  cv_inter_rf("CU", "5"))
+
+CU_rmses_inter_rf <- round(rmse(CU_preds_inter_rf$observed, CU_preds_inter_rf$prediction), 4)
 
 ```
+
+##### Four-Seams
+```{r Inter RF Four Seams, warning = FALSE, echo = FALSE, message = FALSE}
+
+FF_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("FF Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(FF_preds_inter_rf$observed, FF_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+##### Cutters
+```{r Inter RF Cutters, warning = FALSE, echo = FALSE, message = FALSE}
+FC_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("FC Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(FC_preds_inter_rf$observed, FC_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+##### Sinkers
+```{r Inter RF Sinkers, warning = FALSE, echo = FALSE, message = FALSE}
+SI_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("SI Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(SI_preds_inter_rf$observed, SI_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+##### Sliders
+```{r Inter RF Sliders, warning = FALSE, echo = FALSE, message = FALSE}
+SL_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("SL Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(SL_preds_inter_rf$observed, SL_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+##### Curveballs
+```{r Inter RF Curveballs, warning = FALSE, echo = FALSE, message = FALSE}
+CU_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("CU Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(CU_preds_inter_rf$observed, CU_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+##### Change-Ups
+```{r Inter RF Change-Ups, warning = FALSE, echo = FALSE, message = FALSE}
+CH_preds_inter_rf %>%
+  ggplot(aes(x = prediction, y = observed)) +
+  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Predicted",
+       y = "Observed",
+       title = paste("CH Inter-Pitch xwOBA RF Predictions"),
+       caption = paste("RMSE:",
+                       round(rmse(CH_preds_inter_rf$observed, CH_preds_inter_rf$prediction), 4))) +
+  theme_dark() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+#### {-}
+
+### {-}
+
+
+## Comparative
+```{r RMSE Collection, echo = FALSE}
+intra_gam <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(rmse(FF_preds$observed, FF_preds$prediction),
+    rmse(FC_preds$observed, FC_preds$prediction),
+    rmse(SI_preds$observed, SI_preds$prediction),
+    rmse(SL_preds$observed, SL_preds$prediction),
+    rmse(CU_preds$observed, CU_preds$prediction),
+    rmse(CH_preds$observed, CH_preds$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Intra_GAM" = V2)
+
+inter_gam <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(rmse(FF_preds_inter$observed, FF_preds_inter$prediction),
+    rmse(FC_preds_inter$observed, FC_preds_inter$prediction),
+    rmse(SI_preds_inter$observed, SI_preds_inter$prediction),
+    rmse(SL_preds_inter$observed, SL_preds_inter$prediction),
+    rmse(CU_preds_inter$observed, CU_preds_inter$prediction),
+    rmse(CH_preds_inter$observed, CH_preds_inter$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Inter_GAM" = V2)
+
+inter_rf <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(rmse(FF_preds_inter_rf$observed, FF_preds_inter_rf$prediction),
+    rmse(FC_preds_inter_rf$observed, FC_preds_inter_rf$prediction),
+    rmse(SI_preds_inter_rf$observed, SI_preds_inter_rf$prediction),
+    rmse(SL_preds_inter_rf$observed, SL_preds_inter_rf$prediction),
+    rmse(CU_preds_inter_rf$observed, CU_preds_inter_rf$prediction),
+    rmse(CH_preds_inter_rf$observed, CH_preds_inter_rf$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Inter_RF" = V2)
+
+rmse_data <- intra_gam %>% 
+  left_join(inter_gam, by = "pitch_type") %>% 
+  left_join(inter_rf, by = "pitch_type")
+
+rmse_data <- rmse_data %>% 
+  mutate(
+    Intra_GAM = as.numeric(Intra_GAM),
+    Inter_GAM = as.numeric(Inter_GAM),
+    Inter_RF = as.numeric(Inter_RF))
+```
+
+### Model Accuracy Comparison {.tabset}
+
+#### Intra-Pitch GAM
+```{r RMSE Intra GAM, echo = FALSE}
+rmse_data %>% 
+  select(pitch_type, Intra_GAM) %>% 
+  mutate(Intra_GAM = round(Intra_GAM, 4)) %>% 
+  ggplot(aes(x = pitch_type, y = Intra_GAM, color = pitch_type)) +
+  geom_point(show.legend = FALSE, size = 2) +
+  labs(x = "Pitch",
+       y = "RMSE",
+       title = "Root Mean Squared Error for Intra-Pitch GAM") +
+  theme_dark()
+```
+
+#### Inter-Pitch GAM
+```{r RMSE Inter GAM, echo = FALSE}
+rmse_data %>% 
+  select(pitch_type, Inter_GAM) %>% 
+  mutate(Inter_GAM = round(Inter_GAM, 4)) %>% 
+  ggplot(aes(x = pitch_type, y = Inter_GAM, color = pitch_type)) +
+  geom_point(show.legend = FALSE, size = 2) +
+  labs(x = "Pitch",
+       y = "RMSE",
+       title = "Root Mean Squared Error for Inter-Pitch GAM") +
+  theme_dark()
+```
+
+#### Inter-Pitch Random Forest
+```{r RMSE Inter RF, echo = FALSE}
+rmse_data %>% 
+  select(pitch_type, Inter_RF) %>%
+  mutate(Inter_RF = round(Inter_RF, 4)) %>% 
+  ggplot(aes(x = pitch_type, y = Inter_RF, color = pitch_type)) +
+  geom_point(show.legend = FALSE, size = 2) +
+  labs(x = "Pitch",
+       y = "RMSE",
+       title = "Root Mean Squared Error for Inter-Pitch Random Forest") +
+  theme_dark()
+```
+
+#### RMSE Comparison
+```{r RMSE Comp, echo = FALSE}
+rmse_pivot <- rmse_data %>% 
+  pivot_longer(c(Intra_GAM:Inter_RF)) %>% 
+  rename(RMSE = value, model = name)
+
+rmse_pivot <- rmse_pivot %>% 
+  mutate(RMSE = as.numeric(RMSE))
+
+rmse_pivot %>% 
+  ggplot(aes(x = model, y = RMSE, fill = model)) +
+  geom_boxplot(color = "white", show.legend = FALSE) +
+  theme_dark() +
+  labs(x = "Model")
+```
+
+### {-}
+
 
 ```{r Delete Environment, echo = FALSE, eval = FALSE}
 # PC wOBA
@@ -2681,5 +3174,16 @@ rm(grv2_sl_1)
 rm(grv2_sl_2)
 
 ```
+
+
+# Acknowledgements 
+
+We would like to thank Meg Ellingwood and Shamindra Shrotriya, the leaders of the Carnegie Mellon Summer Undergraduate Research Experience in Statistics, for their invaluable knowledge, guidance, and instruction throughout this research experience. This project would not have been possible without the help of Dr. Ron Yurko and Sean Ahmed, Pirates Director of R&D. We would like to thank the entire Carnegie Mellon Sports Analytics Camp teaching team for their support and guidance during this project.  
+
+
+# Citations
+
+[1] Sammon, W., & Sarris, E. (2023, July 7). Fall of the slider: Why are hitters feasting on MLB’s once-deadly breaking ball? The Athletic. https://theathletic.com/4671150/2023/07/07/mlb-sliders-hitters-success/ 
+
 
 
