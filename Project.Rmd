@@ -2945,6 +2945,110 @@ CH_preds_inter_rf %>%
 
 ### {-}
 
+
+## Comparative
+```{r RMSE Collection, echo = FALSE}
+intra_gam <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(rmse(FF_preds$observed, FF_preds$prediction),
+    rmse(FC_preds$observed, FC_preds$prediction),
+    rmse(SI_preds$observed, SI_preds$prediction),
+    rmse(SL_preds$observed, SL_preds$prediction),
+    rmse(CU_preds$observed, CU_preds$prediction),
+    rmse(CH_preds$observed, CH_preds$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Intra_GAM" = V2)
+
+inter_gam <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(rmse(FF_preds_inter$observed, FF_preds_inter$prediction),
+    rmse(FC_preds_inter$observed, FC_preds_inter$prediction),
+    rmse(SI_preds_inter$observed, SI_preds_inter$prediction),
+    rmse(SL_preds_inter$observed, SL_preds_inter$prediction),
+    rmse(CU_preds_inter$observed, CU_preds_inter$prediction),
+    rmse(CH_preds_inter$observed, CH_preds_inter$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Inter_GAM" = V2)
+
+inter_rf <- cbind(c("FF", "FC", "SI", "SL", "CU", "CH"),
+  c(rmse(FF_preds_inter_rf$observed, FF_preds_inter_rf$prediction),
+    rmse(FC_preds_inter_rf$observed, FC_preds_inter_rf$prediction),
+    rmse(SI_preds_inter_rf$observed, SI_preds_inter_rf$prediction),
+    rmse(SL_preds_inter_rf$observed, SL_preds_inter_rf$prediction),
+    rmse(CU_preds_inter_rf$observed, CU_preds_inter_rf$prediction),
+    rmse(CH_preds_inter_rf$observed, CH_preds_inter_rf$prediction))) %>% 
+  as.data.frame() %>% 
+  rename(pitch_type = V1, "Inter_RF" = V2)
+
+rmse_data <- intra_gam %>% 
+  left_join(inter_gam, by = "pitch_type") %>% 
+  left_join(inter_rf, by = "pitch_type")
+
+rmse_data <- rmse_data %>% 
+  mutate(
+    Intra_GAM = as.numeric(Intra_GAM),
+    Inter_GAM = as.numeric(Inter_GAM),
+    Inter_RF = as.numeric(Inter_RF))
+```
+
+### Model Accuracy Comparison {.tabset}
+
+#### Intra-Pitch GAM
+```{r}
+rmse_data %>% 
+  select(pitch_type, Intra_GAM) %>% 
+  mutate(Intra_GAM = round(Intra_GAM, 4)) %>% 
+  ggplot(aes(x = pitch_type, y = Intra_GAM, color = pitch_type)) +
+  geom_point(show.legend = FALSE, size = 2) +
+  labs(x = "Pitch",
+       y = "RMSE",
+       title = "Root Mean Squared Error for Intra-Pitch GAM") +
+  theme_dark()
+```
+
+#### Inter-Pitch GAM
+```{r}
+rmse_data %>% 
+  select(pitch_type, Inter_GAM) %>% 
+  mutate(Inter_GAM = round(Inter_GAM, 4)) %>% 
+  ggplot(aes(x = pitch_type, y = Inter_GAM, color = pitch_type)) +
+  geom_point(show.legend = FALSE, size = 2) +
+  labs(x = "Pitch",
+       y = "RMSE",
+       title = "Root Mean Squared Error for Inter-Pitch GAM") +
+  theme_dark()
+```
+
+#### Inter-Pitch Random Forest
+```{r}
+rmse_data %>% 
+  select(pitch_type, Inter_RF) %>%
+  mutate(Inter_RF = round(Inter_RF, 4)) %>% 
+  ggplot(aes(x = pitch_type, y = Inter_RF, color = pitch_type)) +
+  geom_point(show.legend = FALSE, size = 2) +
+  labs(x = "Pitch",
+       y = "RMSE",
+       title = "Root Mean Squared Error for Inter-Pitch Random Forest") +
+  theme_dark()
+```
+
+#### RMSE Comparison
+```{r}
+rmse_pivot <- rmse_data %>% 
+  pivot_longer(c(Intra_GAM:Inter_RF)) %>% 
+  rename(RMSE = value, model = name)
+
+rmse_pivot <- rmse_pivot %>% 
+  mutate(RMSE = as.numeric(RMSE))
+
+rmse_pivot %>% 
+  ggplot(aes(x = model, y = RMSE, fill = model)) +
+  geom_boxplot(color = "white", show.legend = FALSE) +
+  theme_dark() +
+  labs(x = "Model")
+```
+
+### {-}
+
+
 ```{r Delete Environment, echo = FALSE, eval = FALSE}
 # PC wOBA
 rm(g_ch_1)
