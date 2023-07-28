@@ -1,0 +1,78 @@
+---
+title: "Geom-Smooth-Inter"
+author: "Ethan Park"
+date: "2023-07-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+set.seed(2004)
+statcast = read.csv('./Ethan-Data/Statcast/statcast_2020-2022.csv')
+pitch_types = c('FF', 'FC', 'CH', 'CU', 'SL', 'SI')
+```
+
+```{r}
+remove_outliers <- function(df, col_names) {
+  for (col_name in col_names) {
+    Q1 <- quantile(df[[col_name]], 0.25)
+    Q3 <- quantile(df[[col_name]], 0.75)
+    
+    IQR <- Q3 - Q1
+    
+    lower_bound <- Q1 - 1.5 * IQR
+    upper_bound <- Q3 + 1.5 * IQR
+    
+    df <- df[df[[col_name]] >= lower_bound & df[[col_name]] <= upper_bound, ]
+  }
+  return(df)
+}
+
+inters = list()
+for (pitch_type in pitch_types) {
+  file_path = sprintf('./Ethan-Data/Inter-Pitch/%s_interpitch_2020-2022.csv', pitch_type)
+  df <- read.csv(file_path)
+  
+  df <- remove_outliers(df, col_names = c('est_woba', 'Stuff'))
+  
+  inters[[pitch_type]] <- df
+}
+```
+
+```{r}
+not_x_columns <- c("mlbAM_ID", "player_name", "Year", "Stuff", "pitch_usage", "run_value_per_100")
+```
+
+```{r}
+create_smooth_plot <- function(df, pitch_type) {
+  plots_list <- list()
+  for (col_name in names(df)) {
+    df_cleaned <- na.omit(df[, c(col_name, "est_woba")])  # Include 'est_woba' column
+    plot <- ggplot(data = df_cleaned, aes(x = .data[[col_name]], y = est_woba)) +
+      geom_point() +
+      geom_smooth(method = "lm") +
+      labs(title = paste("Smooth Plot of", pitch_type, col_name, "vs. xWOBA"))
+    plots_list[[col_name]] <- plot
+  }
+  return(plots_list)
+}
+```
+
+```{r}
+ff <- inters[["FF"]] %>%
+  select(-all_of(not_x_columns))
+
+plots_list <- create_smooth_plot(ff, "FF")
+
+for (plot_name in names(plots_list)) {
+  print(plots_list[[plot_name]])
+}
+```

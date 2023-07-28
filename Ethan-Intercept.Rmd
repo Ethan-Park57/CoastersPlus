@@ -1,0 +1,83 @@
+---
+title: "Ethan-Intercept"
+author: "Ethan Park"
+date: "2023-07-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+set.seed(2004)
+
+statcast = read.csv('./Ethan-Data/Statcast/statcast_2020-2022.csv')
+pitch_types = c('FF', 'FC', 'CH', 'CU', 'SL', 'SI')
+
+remove_outliers <- function(df, col_names) {
+  for (col_name in col_names) {
+    Q1 <- quantile(df[[col_name]], 0.25)
+    Q3 <- quantile(df[[col_name]], 0.75)
+    
+    IQR <- Q3 - Q1
+    
+    lower_bound <- Q1 - 1.5 * IQR
+    upper_bound <- Q3 + 1.5 * IQR
+    
+    df <- df[df[[col_name]] >= lower_bound & df[[col_name]] <= upper_bound, ]
+  }
+  return(df)
+}
+
+inters = list()
+for (pitch_type in pitch_types) {
+  file_path = sprintf('./Ethan-Data/Inter-Pitch/%s_interpitch_2020-2022.csv', pitch_type)
+  df <- read.csv(file_path)
+  
+  df <- remove_outliers(df, col_names = c('est_woba', 'Stuff'))
+  inters[[pitch_type]] <- df
+}
+```
+
+```{r}
+rmse <- function(observed, predicted){
+  n <- length(observed)
+  sqrt(sum((observed - predicted)^2) / n)}
+```
+
+
+
+```{r}
+ff <- inters[["FF"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+ff_rud_rmse <- round(rmse(ff$est_woba, ff$prediction), 4)
+
+fc <- inters[["FC"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+fc_rud_rmse <- round(rmse(fc$est_woba, fc$prediction), 4)
+
+ch <- inters[["CH"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+ch_rud_rmse <- round(rmse(ch$est_woba, ch$prediction), 4)
+
+cu <- inters[["CU"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+cu_rud_rmse <- round(rmse(cu$est_woba, cu$prediction), 4)
+
+sl <- inters[["SL"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+sl_rud_rmse <- round(rmse(sl$est_woba, sl$prediction), 4)
+
+si <- inters[["SI"]] %>% 
+  mutate(prediction = mean(est_woba))
+
+si_rud_rmse <- round(rmse(si$est_woba, si$prediction), 4)
+```
+ 
+ 
