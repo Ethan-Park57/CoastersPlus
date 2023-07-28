@@ -16,6 +16,7 @@ library(tidymodels)
 library(ggplot2)
 ```
 
+
 ```{r, warning = FALSE}
 set.seed(2004)
 
@@ -61,6 +62,12 @@ for (pitch_type in pitch_types) {
 }
 ```
 
+```{r}
+rmse <- function(observed, predicted){
+  n <- length(observed)
+  sqrt(sum((observed - predicted)^2) / n)}
+```
+
 
 ```{r}
 cv_inter <- function(pitch, fold){
@@ -86,7 +93,7 @@ cv_inter <- function(pitch, fold){
   exclude_columns <- c(exclude_columns, names(train)[grep("FF", names(train))])
   selected_data <- train[, !(names(train) %in% exclude_columns)]
   remaining_columns <- setdiff(names(selected_data), c("est_woba"))
-  rhs <- paste('s(', remaining_columns, ', k = 4)', sep = '', collapse = ' + ')
+  rhs <- paste('s(', remaining_columns, ', k = 3)', sep = '', collapse = ' + ')
   fml <- paste('est_woba ~', rhs, collapse = ' ')
 
   gam <- gam(as.formula(fml), data = train, family = gaussian, method = "REML")
@@ -209,32 +216,32 @@ print(SI_preds_inter %>%
   theme_dark() +
   theme(plot.title = element_text(hjust = 0.5)))
 ```
-```{r}
-SI_preds_inter = data.frame()
-SI_preds_inter <- rbind(cv_inter("SI", "1"),
-                  cv_inter("SI", "2"),
-                  cv_inter("SI", "3"),
-                  cv_inter("SI", "4"),
-                  cv_inter("SI", "5"))
-
-SI_rmses_inter <- round(rmse(SI_preds_inter$observed, SI_preds_inter$prediction), 4)
-
-print(SI_preds_inter %>%
-  ggplot(aes(x = observed, y = prediction)) +
-  geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
-  geom_smooth(se = FALSE, method = lm) +
-  scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05))) +
-  scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05))) +
-  labs(x = "Observed",
-       y = "Predicted",
-       title = paste("SI Inter-Pitch xwOBA GAM Predictions"),
-       caption = paste("RMSE:",
-                       round(rmse(SI_preds_inter$observed, SI_preds_inter$prediction), 4))) +
-  theme_dark() +
-  theme(plot.title = element_text(hjust = 0.5)))
-```
+# ```{r}
+# SI_preds_inter = data.frame()
+# SI_preds_inter <- rbind(cv_inter("SI", "1"),
+#                   cv_inter("SI", "2"),
+#                   cv_inter("SI", "3"),
+#                   cv_inter("SI", "4"),
+#                   cv_inter("SI", "5"))
+# 
+# SI_rmses_inter <- round(rmse(SI_preds_inter$observed, SI_preds_inter$prediction), 4)
+# 
+# print(SI_preds_inter %>%
+#   ggplot(aes(x = observed, y = prediction)) +
+#   geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
+#   geom_smooth(se = FALSE, method = lm) +
+#   scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
+#                      expand = expansion(mult = c(0, 0.05))) +
+#   scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
+#                      expand = expansion(mult = c(0, 0.05))) +
+#   labs(x = "Observed",
+#        y = "Predicted",
+#        title = paste("SI Inter-Pitch xwOBA GAM Predictions"),
+#        caption = paste("RMSE:",
+#                        round(rmse(SI_preds_inter$observed, SI_preds_inter$prediction), 4))) +
+#   theme_dark() +
+#   theme(plot.title = element_text(hjust = 0.5)))
+# ```
 
 ```{r}
 CH_preds_inter = data.frame()

@@ -62,7 +62,7 @@ for (pitch_type in pitch_types) {
 }
 ```
 ```{r}
-cv_inter_rf <- function(pitch, fold){
+cv_inter_rf <- function(pitch, fold, num_bootstraps = 50){
   prepare <- function(data) {
     folds = data %>% 
       select(mlbAM_ID) %>% 
@@ -85,14 +85,42 @@ cv_inter_rf <- function(pitch, fold){
   exclude_columns <- c(exclude_columns, names(train)[grep("spin_rate", names(train))])
   exclude_columns <- c(exclude_columns, names(train)[grep("FF", names(train))])
   selected_data <- train[, !(names(train) %in% exclude_columns)]
-  rf <- ranger(est_woba ~ ., data = selected_data, num.trees = 500,
-                      importance = "impurity") 
+  # rf <- ranger(est_woba ~ ., data = selected_data, num.trees = 500,
+  #                     importance = "impurity")
+  # 
+  # # gam <- gam(est_woba ~ s(Stuff) + s)
+  # y_pred <- predict(rf, test) %>% as.data.frame()
+  # 
+  # rf_pred_df = data.frame(observed = test$est_woba, prediction = y_pred$prediction)
+  # return(rf_pred_df)
   
-  # gam <- gam(est_woba ~ s(Stuff) + s)
-  y_pred <- predict(rf, test) %>% as.data.frame()
   
-  rf_pred_df = data.frame(observed = test$est_woba, prediction = y_pred$prediction)
-  return(rf_pred_df)
+  
+  
+  # Initialize an empty list to store bootstrapped predictions
+  bootstrap_predictions <- list()
+
+  for (i in 1:num_bootstraps) {
+    # Create a bootstrapped version of the training data by sampling with replacement
+    bootstrapped_data <- selected_data[sample(nrow(selected_data), replace = TRUE), ]
+
+    # Fit the Random Forest model on the bootstrapped data
+    rf <- ranger(est_woba ~ ., data = bootstrapped_data, num.trees = 500, importance = "impurity",
+                 min.node.size=20)
+
+    # Make predictions on the test data using the bootstrapped model
+    y_pred <- predict(rf, test) %>% as.data.frame()
+
+    # Save the predictions in the list
+    bootstrap_predictions[[i]] <- data.frame(observed = test$est_woba, prediction = y_pred$prediction)
+  }
+
+  # Combine the bootstrapped predictions and calculate the average prediction for each observation
+  combined_predictions <- do.call(rbind, bootstrap_predictions) %>%
+    group_by(observed) %>%
+    summarise(prediction = mean(prediction))
+
+  return(combined_predictions)
 }
 ```
 
@@ -241,9 +269,11 @@ print(CU_preds_inter_rf %>%
   geom_point(color = "#FDB827", shape = 18, size = 2.5, alpha = 0.8) +
   geom_smooth(se = FALSE, method = lm) +
   scale_y_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05))) +
+                     expand = expansion(mult = c(0, 0.05)),
+                     limits = c(min(observed), max(observed))) +
   scale_x_continuous(labels = scales::comma_format(accuracy = 0.001),
-                     expand = expansion(mult = c(0, 0.05))) +
+                     expand = expansion(mult = c(0, 0.05)),
+                     limits = c(min(prediction), max(prediction))) +
   labs(x = "Predicted",
        y = "Observed",
        title = paste("CU Inter-Pitch xwOBA RF Predictions"),
