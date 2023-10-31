@@ -1,0 +1,37 @@
+---
+title: "Implementation"
+author: "Evan Wu"
+date: "`r Sys.Date()`"
+output: html_document
+  html_document:
+    code_folding: hide
+---
+```{r Library}
+library(tidyverse)
+library(ranger)
+
+```
+
+```{r Data, warning = FALSE, message = FALSE}
+si <- read_csv("CSVs/si.csv") %>% 
+  select(-...1:player_name, -prediction)
+
+sl <- read_csv("CSVs/sl.csv") %>% 
+  select(-...1:player_name, -prediction)
+
+cu <- read_csv("CSVs/cu.csv") %>% 
+  select(-...1:player_name, -prediction)
+```
+
+```{r Sinker Model}
+si_model <- ranger(est_woba ~ ., data = si)
+```
+
+```{r Slider Model}
+sl_model <- ranger(est_woba ~ ., data = sl)
+```
+
+```{r Curveball Model}
+cu_model <- ranger(est_woba ~ ., data = cu)
+```
+
