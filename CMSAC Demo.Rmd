@@ -14,13 +14,13 @@ library(ranger)
 
 ```{r Data, warning = FALSE, message = FALSE}
 si <- read_csv("CSVs/si.csv") %>% 
-  select(-...1:player_name, -prediction)
+  select(-...1:-player_name, -prediction)
 
 sl <- read_csv("CSVs/sl.csv") %>% 
-  select(-...1:player_name, -prediction)
+  select(-...1:-player_name, -prediction)
 
 cu <- read_csv("CSVs/cu.csv") %>% 
-  select(-...1:player_name, -prediction)
+  select(-...1:-player_name, -prediction)
 ```
 
 ```{r Sinker Model}
