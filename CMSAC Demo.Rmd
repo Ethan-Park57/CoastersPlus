@@ -6,13 +6,13 @@ output: html_document
   html_document:
     code_folding: hide
 ---
-```{r Library}
+```{r Library, warning = FALSE, message = FALSE}
 library(tidyverse)
 library(ranger)
 
 ```
 
-```{r Data, warning = FALSE, message = FALSE}
+```{r Prediction Data, warning = FALSE, message = FALSE}
 si <- read_csv("CSVs/si.csv") %>% 
   select(-...1:-player_name, -prediction)
 
@@ -21,6 +21,17 @@ sl <- read_csv("CSVs/sl.csv") %>%
 
 cu <- read_csv("CSVs/cu.csv") %>% 
   select(-...1:-player_name, -prediction)
+```
+
+```{r 2023 Data, warning = FALSE, message = FALSE}
+si_2023 <- read_csv("Updated Data/SI_interpitch_2020-2023.csv") %>% 
+  filter(Season == 2023)
+
+sl_2023 <- read_csv("Updated Data/SL_interpitch_2020-2023.csv") %>% 
+  filter(Season == 2023)
+
+cu_2023 <- read_csv("Updated Data/CU_interpitch_2020-2023.csv") %>% 
+  filter(Season == 2023)
 ```
 
 ```{r Sinker Model}
