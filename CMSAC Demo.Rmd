@@ -2,14 +2,14 @@
 title: "Implementation"
 author: "Evan Wu"
 date: "`r Sys.Date()`"
-output: html_document
+output:
   html_document:
     code_folding: hide
 ---
 ```{r Library, warning = FALSE, message = FALSE}
 library(tidyverse)
 library(ranger)
-
+library(Metrics)
 ```
 
 ```{r Original Data, warning = FALSE, message = FALSE}
@@ -33,40 +33,49 @@ xwOBA_cu <- arsenals %>%
 si <- read_csv("Updated Data/SI_interpitch_2020-2023.csv") %>% 
   select(-...1:-player_name) %>% 
 left_join(xwOBA_si, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
-  filter(!is.na(est_woba))
+  filter(!is.na(est_woba)) %>%
+  mutate_all(~ifelse(is.na(.), 100, .))
 
 sl <- read_csv("Updated Data/SL_interpitch_2020-2023.csv") %>% 
   select(-...1:-player_name) %>% 
 left_join(xwOBA_sl, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
-  filter(!is.na(est_woba))
+  filter(!is.na(est_woba)) %>%
+  mutate_all(~ifelse(is.na(.), 100, .))
 
 cu <- read_csv("Updated Data/CU_interpitch_2020-2023.csv") %>% 
   select(-...1:-player_name) %>% 
 left_join(xwOBA_cu, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
-  filter(!is.na(est_woba))
+  filter(!is.na(est_woba)) %>%
+  mutate_all(~ifelse(is.na(.), 100, .))
 
 ```
 
 ```{r Test Data, warning = FALSE, message = FALSE}
 si_test <- si %>% 
-  filter(Season != 2023)
+  filter(Season != 2023) %>% 
+  select(-mlbAM_ID, -Season)
 
 sl_test <- sl %>% 
-  filter(Season != 2023)
+  filter(Season != 2023) %>% 
+  select(-mlbAM_ID, -Season)
 
 cu_test <- cu %>% 
-  filter(Season != 2023)
+  filter(Season != 2023) %>% 
+  select(-mlbAM_ID, -Season)
 ```
 
 ```{r 2023 Data, warning = FALSE, message = FALSE}
 si_2023 <- si %>% 
-  filter(Season == 2023)
+  filter(Season == 2023) %>% 
+  select(-mlbAM_ID, -Season)
 
 sl_2023 <- sl %>% 
-  filter(Season == 2023)
+  filter(Season == 2023) %>% 
+  select(-mlbAM_ID, -Season)
 
 cu_2023 <- cu %>% 
-  filter(Season == 2023)
+  filter(Season == 2023) %>% 
+  select(-mlbAM_ID, -Season)
 ```
 
 ```{r Sinker Model}
@@ -79,5 +88,60 @@ sl_model <- ranger(est_woba ~ ., data = sl_test)
 
 ```{r Curveball Model}
 cu_model <- ranger(est_woba ~ ., data = cu_test)
+```
+
+```{r Predictions 2023, warning = FALSE, message = FALSE}
+# Sinker
+SI <- si_2023 %>% 
+  mutate(prediction = predict(si_model, si_2023)$predictions) %>% 
+  rename(observed = est_woba) %>% 
+  select(observed, prediction)
+
+rmse_si <- rmse(SI$observed, SI$prediction)
+
+
+# Slider
+SL <- sl_2023 %>% 
+  mutate(prediction = predict(sl_model, sl_2023)$predictions) %>% 
+  rename(observed = est_woba) %>% 
+  select(observed, prediction)
+
+rmse_sl <- rmse(SL$observed, SL$prediction)
+
+
+# Curveball
+CU <- cu_2023 %>% 
+  mutate(prediction = predict(cu_model, cu_2023)$predictions) %>% 
+  rename(observed = est_woba) %>% 
+  select(observed, prediction)
+
+rmse_cu <- rmse(CU$observed, CU$prediction)
+```
+
+##### RMSEs
+Sinker: `r round(rmse_si, 4)`
+
+
+Slider: `r round(rmse_sl, 4)`
+
+
+Curveball: `r round(rmse_cu, 4)`
+
+```{r}
+CU %>% 
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point() +
+  labs(title = "Curveball")
+
+
+SL %>% 
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point() +
+  labs(title = "Slider")
+
+SI %>% 
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point() +
+  labs(title = "Sinker")
 ```
 
