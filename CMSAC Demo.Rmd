@@ -10,6 +10,8 @@ output:
 library(tidyverse)
 library(ranger)
 library(Metrics)
+
+set.seed(840172)
 ```
 
 ```{r Original Data, warning = FALSE, message = FALSE}
@@ -27,6 +29,18 @@ xwOBA_sl <- arsenals %>%
 
 xwOBA_cu <- arsenals %>% 
   filter(pitch_type == "CUKC") %>% 
+  select(player_id, Season, est_woba)
+
+xwOBA_ch <- arsenals %>% 
+  filter(pitch_type == "CH") %>% 
+  select(player_id, Season, est_woba)
+
+xwOBA_fc <- arsenals %>% 
+  filter(pitch_type == "FC") %>% 
+  select(player_id, Season, est_woba)
+
+xwOBA_ff <- arsenals %>% 
+  filter(pitch_type == "FF") %>% 
   select(player_id, Season, est_woba)
 
 
@@ -48,19 +62,55 @@ left_join(xwOBA_cu, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>%
   filter(!is.na(est_woba)) %>%
   mutate_all(~ifelse(is.na(.), 100, .))
 
+ch <- read_csv("Updated Data/CH_interpitch_2020-2023.csv") %>% 
+  select(-...1:-player_name) %>% 
+left_join(xwOBA_ch, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
+  filter(!is.na(est_woba)) %>%
+  mutate_all(~ifelse(is.na(.), 100, .))
+
+fc <- read_csv("Updated Data/FC_interpitch_2020-2023-3.csv") %>% 
+  select(-...1:-player_name) %>% 
+left_join(xwOBA_fc, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
+  filter(!is.na(est_woba)) %>%
+  mutate_all(~ifelse(is.na(.), 100, .))
+
+ff <- read_csv("Updated Data/FF_interpitch_2020-2023.csv") %>% 
+  select(-...1:-player_name) %>% 
+left_join(xwOBA_ff, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
+  filter(!is.na(est_woba)) %>%
+  mutate_all(~ifelse(is.na(.), 100, .))
+
 ```
 
 ```{r Test Data, warning = FALSE, message = FALSE}
 si_test <- si %>% 
   filter(Season != 2023) %>% 
+  filter(Season != 2020) %>% 
   select(-mlbAM_ID, -Season)
 
 sl_test <- sl %>% 
   filter(Season != 2023) %>% 
+  filter(Season != 2020) %>%
   select(-mlbAM_ID, -Season)
 
 cu_test <- cu %>% 
   filter(Season != 2023) %>% 
+  filter(Season != 2020) %>%
+  select(-mlbAM_ID, -Season)
+
+ch_test <- ch %>% 
+  filter(Season != 2023) %>% 
+  filter(Season != 2020) %>%
+  select(-mlbAM_ID, -Season)
+
+fc_test <- fc %>% 
+  filter(Season != 2023) %>% 
+  filter(Season != 2020) %>%
+  select(-mlbAM_ID, -Season)
+
+ff_test <- ff %>% 
+  filter(Season != 2023) %>% 
+  filter(Season != 2020) %>%
   select(-mlbAM_ID, -Season)
 ```
 
@@ -76,6 +126,18 @@ sl_2023 <- sl %>%
 cu_2023 <- cu %>% 
   filter(Season == 2023) %>% 
   select(-mlbAM_ID, -Season)
+
+ch_2023 <- ch %>% 
+  filter(Season == 2023) %>% 
+  select(-mlbAM_ID, -Season)
+
+fc_2023 <- fc %>% 
+  filter(Season == 2023) %>% 
+  select(-mlbAM_ID, -Season)
+
+ff_2023 <- ff %>% 
+  filter(Season == 2023) %>% 
+  select(-mlbAM_ID, -Season)
 ```
 
 ```{r Sinker Model}
@@ -88,6 +150,18 @@ sl_model <- ranger(est_woba ~ ., data = sl_test)
 
 ```{r Curveball Model}
 cu_model <- ranger(est_woba ~ ., data = cu_test)
+```
+
+```{r Change-Up Model}
+ch_model <- ranger(est_woba ~ ., data = ch_test)
+```
+
+```{r Cutter Model}
+fc_model <- ranger(est_woba ~ ., data = fc_test)
+```
+
+```{r Fastball Model}
+ff_model <- ranger(est_woba ~ ., data = ff_test)
 ```
 
 ```{r Predictions 2023, warning = FALSE, message = FALSE}
@@ -116,6 +190,33 @@ CU <- cu_2023 %>%
   select(observed, prediction)
 
 rmse_cu <- rmse(CU$observed, CU$prediction)
+
+
+# Change-Up
+CH <- ch_2023 %>% 
+  mutate(prediction = predict(ch_model, ch_2023)$predictions) %>% 
+  rename(observed = est_woba) %>% 
+  select(observed, prediction)
+
+rmse_ch <- rmse(CH$observed, CH$prediction)
+
+
+# Cutter
+FC <- fc_2023 %>% 
+  mutate(prediction = predict(fc_model, fc_2023)$predictions) %>% 
+  rename(observed = est_woba) %>% 
+  select(observed, prediction)
+
+rmse_fc <- rmse(FC$observed, FC$prediction)
+
+
+# Fastball
+FF <- ff_2023 %>% 
+  mutate(prediction = predict(ff_model, ff_2023)$predictions) %>% 
+  rename(observed = est_woba) %>% 
+  select(observed, prediction)
+
+rmse_ff <- rmse(FF$observed, FF$prediction)
 ```
 
 ##### RMSEs
@@ -126,6 +227,15 @@ Slider: `r round(rmse_sl, 4)`
 
 
 Curveball: `r round(rmse_cu, 4)`
+
+
+Change-Up: `r round(rmse_ch, 4)`
+
+
+Cutter: `r round(rmse_cu, 4)`
+
+
+Fastball: `r round(rmse_ff, 4)`
 
 ```{r}
 CU %>% 
@@ -139,9 +249,28 @@ SL %>%
   geom_point() +
   labs(title = "Slider")
 
+
 SI %>% 
   ggplot(aes(x = observed, y = prediction)) +
   geom_point() +
   labs(title = "Sinker")
+
+
+CH %>% 
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point() +
+  labs(title = "Change-Up")
+
+
+FC %>% 
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point() +
+  labs(title = "Cutter")
+
+
+FF %>% 
+  ggplot(aes(x = observed, y = prediction)) +
+  geom_point() +
+  labs(title = "Fastball")
 ```
 
