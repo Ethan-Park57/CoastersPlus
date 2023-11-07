@@ -12,37 +12,72 @@ library(ranger)
 
 ```
 
-```{r Prediction Data, warning = FALSE, message = FALSE}
-si <- read_csv("CSVs/si.csv") %>% 
-  select(-...1:-player_name, -prediction)
+```{r Original Data, warning = FALSE, message = FALSE}
+arsenals <- read_csv("Updated Data/arsenal_stats.csv") %>% 
+  rename(player_name = `last_name, first_name`) %>% 
+  select(player_name, player_id, Season, pitch_type, est_woba, woba, run_value)
 
-sl <- read_csv("CSVs/sl.csv") %>% 
-  select(-...1:-player_name, -prediction)
+xwOBA_si <- arsenals %>% 
+  filter(pitch_type == "SIFT") %>% 
+  select(player_id, Season, est_woba)
 
-cu <- read_csv("CSVs/cu.csv") %>% 
-  select(-...1:-player_name, -prediction)
+xwOBA_sl <- arsenals %>% 
+  filter(pitch_type == "SL") %>% 
+  select(player_id, Season, est_woba)
+
+xwOBA_cu <- arsenals %>% 
+  filter(pitch_type == "CUKC") %>% 
+  select(player_id, Season, est_woba)
+
+
+si <- read_csv("Updated Data/SI_interpitch_2020-2023.csv") %>% 
+  select(-...1:-player_name) %>% 
+left_join(xwOBA_si, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
+  filter(!is.na(est_woba))
+
+sl <- read_csv("Updated Data/SL_interpitch_2020-2023.csv") %>% 
+  select(-...1:-player_name) %>% 
+left_join(xwOBA_sl, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
+  filter(!is.na(est_woba))
+
+cu <- read_csv("Updated Data/CU_interpitch_2020-2023.csv") %>% 
+  select(-...1:-player_name) %>% 
+left_join(xwOBA_cu, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
+  filter(!is.na(est_woba))
+
+```
+
+```{r Test Data, warning = FALSE, message = FALSE}
+si_test <- si %>% 
+  filter(Season != 2023)
+
+sl_test <- sl %>% 
+  filter(Season != 2023)
+
+cu_test <- cu %>% 
+  filter(Season != 2023)
 ```
 
 ```{r 2023 Data, warning = FALSE, message = FALSE}
-si_2023 <- read_csv("Updated Data/SI_interpitch_2020-2023.csv") %>% 
+si_2023 <- si %>% 
   filter(Season == 2023)
 
-sl_2023 <- read_csv("Updated Data/SL_interpitch_2020-2023.csv") %>% 
+sl_2023 <- sl %>% 
   filter(Season == 2023)
 
-cu_2023 <- read_csv("Updated Data/CU_interpitch_2020-2023.csv") %>% 
+cu_2023 <- cu %>% 
   filter(Season == 2023)
 ```
 
 ```{r Sinker Model}
-si_model <- ranger(est_woba ~ ., data = si)
+si_model <- ranger(est_woba ~ ., data = si_test)
 ```
 
 ```{r Slider Model}
-sl_model <- ranger(est_woba ~ ., data = sl)
+sl_model <- ranger(est_woba ~ ., data = sl_test)
 ```
 
 ```{r Curveball Model}
-cu_model <- ranger(est_woba ~ ., data = cu)
+cu_model <- ranger(est_woba ~ ., data = cu_test)
 ```
 
