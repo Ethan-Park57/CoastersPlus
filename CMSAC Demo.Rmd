@@ -10,6 +10,8 @@ output:
 library(tidyverse)
 library(ranger)
 library(Metrics)
+library(mgcv)
+library(knitr)
 
 set.seed(840172)
 ```
@@ -142,6 +144,93 @@ ff_test <- ff %>%
   select(-mlbAM_ID, -Season)
 ```
 
+```{r Bootstrapping Data}
+num_bootstraps <- 30
+
+# Sinker
+bootstrapped_samples_si <- list()
+
+for (i in 1:num_bootstraps) {
+  
+  bootstrapped_sample_si <- si_test[sample(nrow(si_test), replace = TRUE), ]
+  
+  bootstrapped_samples_si[[as.character(i)]] <- bootstrapped_sample_si
+}
+
+si_test_gam <- do.call(rbind, bootstrapped_samples_si)
+
+
+
+# Slider
+bootstrapped_samples_sl <- list()
+
+for (i in 1:num_bootstraps) {
+  
+  bootstrapped_sample_sl <- sl_test[sample(nrow(sl_test), replace = TRUE), ]
+  
+  bootstrapped_samples_sl[[as.character(i)]] <- bootstrapped_sample_sl
+}
+
+sl_test_gam <- do.call(rbind, bootstrapped_samples_sl)
+
+
+
+# Curveball
+bootstrapped_samples_cu <- list()
+
+for (i in 1:num_bootstraps) {
+  
+  bootstrapped_sample_cu <- cu_test[sample(nrow(cu_test), replace = TRUE), ]
+  
+  bootstrapped_samples_cu[[as.character(i)]] <- bootstrapped_sample_cu
+}
+
+cu_test_gam <- do.call(rbind, bootstrapped_samples_cu)
+
+
+
+# Change-Up
+bootstrapped_samples_ch <- list()
+
+for (i in 1:num_bootstraps) {
+  
+  bootstrapped_sample_ch <- ch_test[sample(nrow(ch_test), replace = TRUE), ]
+  
+  bootstrapped_samples_ch[[as.character(i)]] <- bootstrapped_sample_ch
+}
+
+ch_test_gam <- do.call(rbind, bootstrapped_samples_ch)
+
+
+
+# Cutter
+bootstrapped_samples_fc <- list()
+
+for (i in 1:num_bootstraps) {
+  
+  bootstrapped_sample_fc <- fc_test[sample(nrow(fc_test), replace = TRUE), ]
+  
+  bootstrapped_samples_fc[[as.character(i)]] <- bootstrapped_sample_fc
+}
+
+fc_test_gam <- do.call(rbind, bootstrapped_samples_fc)
+
+
+
+# Cutter
+bootstrapped_samples_ff <- list()
+
+for (i in 1:num_bootstraps) {
+  
+  bootstrapped_sample_ff <- ff_test[sample(nrow(ff_test), replace = TRUE), ]
+  
+  bootstrapped_samples_ff[[as.character(i)]] <- bootstrapped_sample_ff
+}
+
+ff_test_gam <- do.call(rbind, bootstrapped_samples_ff)
+
+```
+
 ```{r 2023 Data, warning = FALSE, message = FALSE}
 si_2023 <- si %>% 
   filter(Season == 2023) %>% 
@@ -168,140 +257,198 @@ ff_2023 <- ff %>%
   select(-mlbAM_ID, -Season)
 ```
 
-```{r Sinker Model}
+```{r Inter RF Model}
 si_model <- ranger(est_woba ~ ., data = si_test)
-```
 
-```{r Slider Model}
 sl_model <- ranger(est_woba ~ ., data = sl_test)
-```
 
-```{r Curveball Model}
 cu_model <- ranger(est_woba ~ ., data = cu_test)
-```
 
-```{r Change-Up Model}
 ch_model <- ranger(est_woba ~ ., data = ch_test)
-```
 
-```{r Cutter Model}
 fc_model <- ranger(est_woba ~ ., data = fc_test)
-```
 
-```{r Fastball Model}
 ff_model <- ranger(est_woba ~ ., data = ff_test)
 ```
 
-```{r Predictions 2023, warning = FALSE, message = FALSE}
+```{r Intra RF Model}
+si_model_rf2 <- ranger(est_woba ~ Stuff, data = si_test)
+
+sl_model_rf2 <- ranger(est_woba ~ Stuff, data = sl_test)
+
+cu_model_rf2 <- ranger(est_woba ~ Stuff, data = cu_test)
+
+ch_model_rf2 <- ranger(est_woba ~ Stuff, data = ch_test)
+
+fc_model_rf2 <- ranger(est_woba ~ Stuff, data = fc_test)
+
+ff_model_rf2 <- ranger(est_woba ~ Stuff, data = ff_test)
+
+```
+
+```{r Inter GAM, warning = FALSE, message = FALSE}
+
+gam_formula <- function(data, response_var) {
+  explanatory_vars <- setdiff(names(data), response_var)
+  formula_str <- paste(response_var, " ~ ", paste(explanatory_vars, collapse = " + "))
+  formula <- as.formula(formula_str)
+  return(formula)
+}
+
+
+si_model_gam1 <- gam(gam_formula(si_test, "est_woba"), data = si_test_gam, 
+                     family = gaussian, method = "REML")
+
+sl_model_gam1 <- gam(gam_formula(sl_test, "est_woba"), data = sl_test_gam, 
+                     family = gaussian, method = "REML")
+
+cu_model_gam1 <- gam(gam_formula(cu_test, "est_woba"), data = cu_test_gam, 
+                     family = gaussian, method = "REML")
+
+ch_model_gam1 <- gam(gam_formula(ch_test, "est_woba"), data = ch_test_gam, 
+                     family = gaussian, method = "REML")
+
+fc_model_gam1 <- gam(gam_formula(fc_test, "est_woba"), data = fc_test_gam, 
+                     family = gaussian, method = "REML")
+
+ff_model_gam1 <- gam(gam_formula(ff_test, "est_woba"), data = ff_test_gam, 
+                     family = gaussian, method = "REML")
+
+```
+```{r Intra GAM}
+
+si_model_gam2 <- gam(est_woba ~ Stuff, data = si_test, 
+                     family = gaussian, method = "REML")
+
+sl_model_gam2 <- gam(est_woba ~ Stuff, data = sl_test, 
+                     family = gaussian, method = "REML")
+
+cu_model_gam2 <- gam(est_woba ~ Stuff, data = cu_test, 
+                     family = gaussian, method = "REML")
+
+ch_model_gam2 <- gam(est_woba ~ Stuff, data = ch_test, 
+                     family = gaussian, method = "REML")
+
+fc_model_gam2 <- gam(est_woba ~ Stuff, data = fc_test, 
+                     family = gaussian, method = "REML")
+
+ff_model_gam2 <- gam(est_woba ~ Stuff, data = ff_test, 
+                     family = gaussian, method = "REML")
+
+```
+
+```{r predictions 2023, warning = FALSE, message = FALSE}
 # Sinker
 SI <- si_2023 %>% 
-  mutate(prediction = predict(si_model, si_2023)$predictions) %>% 
+  mutate(RF1 = predict(si_model, si_2023)$predictions,
+         RF2 = predict(si_model_rf2, si_2023)$predictions,
+         GAM1 = predict(si_model_gam1, si_2023),
+         GAM2 = predict(si_model_gam2, si_2023)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, prediction)
-
-rmse_si <- rmse(SI$observed, SI$prediction)
+  select(observed, RF1, RF2, GAM1, GAM2)
 
 
 # Slider
 SL <- sl_2023 %>% 
-  mutate(prediction = predict(sl_model, sl_2023)$predictions) %>% 
+  mutate(RF1 = predict(sl_model, sl_2023)$predictions,
+         RF2 = predict(sl_model_rf2, sl_2023)$predictions,
+         GAM1 = predict(sl_model_gam1, sl_2023),
+         GAM2 = predict(sl_model_gam2, sl_2023)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, prediction)
-
-rmse_sl <- rmse(SL$observed, SL$prediction)
+  select(observed, RF1, RF2, GAM1, GAM2)
 
 
 # Curveball
 CU <- cu_2023 %>% 
-  mutate(prediction = predict(cu_model, cu_2023)$predictions) %>% 
+  mutate(RF1 = predict(cu_model, cu_2023)$predictions,
+         RF2 = predict(cu_model_rf2, cu_2023)$predictions,
+         GAM1 = predict(cu_model_gam1, cu_2023),
+         GAM2 = predict(cu_model_gam2, cu_2023)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, prediction)
-
-rmse_cu <- rmse(CU$observed, CU$prediction)
+  select(observed, RF1, RF2, GAM1, GAM2)
 
 
 # Change-Up
 CH <- ch_2023 %>% 
-  mutate(prediction = predict(ch_model, ch_2023)$predictions) %>% 
+  mutate(RF1 = predict(ch_model, ch_2023)$predictions,
+         RF2 = predict(ch_model_rf2, ch_2023)$predictions,
+         GAM1 = predict(ch_model_gam1, ch_2023),
+         GAM2 = predict(ch_model_gam2, ch_2023)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, prediction)
-
-rmse_ch <- rmse(CH$observed, CH$prediction)
+  select(observed, RF1, RF2, GAM1, GAM2)
 
 
 # Cutter
 FC <- fc_2023 %>% 
-  mutate(prediction = predict(fc_model, fc_2023)$predictions) %>% 
+  mutate(RF1 = predict(fc_model, fc_2023)$predictions,
+         RF2 = predict(fc_model_rf2, fc_2023)$predictions,
+         GAM1 = predict(fc_model_gam1, fc_2023),
+         GAM2 = predict(fc_model_gam2, fc_2023)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, prediction)
-
-rmse_fc <- rmse(FC$observed, FC$prediction)
+  select(observed, RF1, RF2, GAM1, GAM2)
 
 
 # Fastball
 FF <- ff_2023 %>% 
-  mutate(prediction = predict(ff_model, ff_2023)$predictions) %>% 
+  mutate(RF1 = predict(ff_model, ff_2023)$predictions,
+         RF2 = predict(ff_model_rf2, ff_2023)$predictions,
+         GAM1 = predict(ff_model_gam1, ff_2023),
+         GAM2 = predict(ff_model_gam2, ff_2023)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, prediction)
+  select(observed, RF1, RF2, GAM1, GAM2)
 
-rmse_ff <- rmse(FF$observed, FF$prediction)
+# RMSEs Inter RF
+rmse_1_si <- rmse(SI$observed, SI$RF1)
+rmse_1_sl <- rmse(SL$observed, SL$RF1)
+rmse_1_cu <- rmse(CU$observed, CU$RF1)
+rmse_1_ch <- rmse(CH$observed, CH$RF1)
+rmse_1_fc <- rmse(FC$observed, FC$RF1)
+rmse_1_ff <- rmse(FF$observed, FF$RF1)
+
+# RMSEs Intra RF
+rmse_2_si <- rmse(SI$observed, SI$RF2)
+rmse_2_sl <- rmse(SL$observed, SL$RF2)
+rmse_2_cu <- rmse(CU$observed, CU$RF2)
+rmse_2_ch <- rmse(CH$observed, CH$RF2)
+rmse_2_fc <- rmse(FC$observed, FC$RF2)
+rmse_2_ff <- rmse(FF$observed, FF$RF2)
+
+# RMSEs Inter GAM
+rmse_3_si <- rmse(SI$observed, SI$GAM1)
+rmse_3_sl <- rmse(SL$observed, SL$GAM1)
+rmse_3_cu <- rmse(CU$observed, CU$GAM1)
+rmse_3_ch <- rmse(CH$observed, CH$GAM1)
+rmse_3_fc <- rmse(FC$observed, FC$GAM1)
+rmse_3_ff <- rmse(FF$observed, FF$GAM1)
+
+# RMSEs Intra GAM
+rmse_4_si <- rmse(SI$observed, SI$GAM2)
+rmse_4_sl <- rmse(SL$observed, SL$GAM2)
+rmse_4_cu <- rmse(CU$observed, CU$GAM2)
+rmse_4_ch <- rmse(CH$observed, CH$GAM2)
+rmse_4_fc <- rmse(FC$observed, FC$GAM2)
+rmse_4_ff <- rmse(FF$observed, FF$GAM2)
 ```
 
-##### RMSEs
 
-Cutter: `r round(rmse_fc, 4)`
+```{r RMSEs}
+RMSEs <- data.frame("Pitch" = c("Cutter", "Slider", "4-Seam", 
+                                "Sinker", "Curveball", "Change-Up"),
+                    
+                    "Inter RF" = c(rmse_1_fc, rmse_1_sl, rmse_1_ff,
+                                   rmse_1_si, rmse_1_cu, rmse_1_ch),
+                    
+                    "Intra RF" = c(rmse_2_fc, rmse_2_sl, rmse_2_ff,
+                                   rmse_2_si, rmse_2_cu, rmse_2_ch),
+                    
+                    "Inter GAM" = c(rmse_3_fc, rmse_3_sl, rmse_3_ff,
+                                   rmse_3_si, rmse_3_cu, rmse_3_ch),
+                    
+                    "Intra GAM" = c(rmse_4_fc, rmse_4_sl, rmse_4_ff,
+                                   rmse_4_si, rmse_4_cu, rmse_4_ch)
+                    )
 
-
-Slider: `r round(rmse_sl, 4)`
-
-
-Fastball: `r round(rmse_ff, 4)`
-
-
-Sinker: `r round(rmse_si, 4)`
-
-
-Curveball: `r round(rmse_cu, 4)`
-
-
-Change-Up: `r round(rmse_ch, 4)`
-
-
-
-```{r}
-CU %>% 
-  ggplot(aes(x = observed, y = prediction)) +
-  geom_point() +
-  labs(title = "Curveball")
-
-
-SL %>% 
-  ggplot(aes(x = observed, y = prediction)) +
-  geom_point() +
-  labs(title = "Slider")
-
-
-SI %>% 
-  ggplot(aes(x = observed, y = prediction)) +
-  geom_point() +
-  labs(title = "Sinker")
-
-
-CH %>% 
-  ggplot(aes(x = observed, y = prediction)) +
-  geom_point() +
-  labs(title = "Change-Up")
-
-
-FC %>% 
-  ggplot(aes(x = observed, y = prediction)) +
-  geom_point() +
-  labs(title = "Cutter")
-
-
-FF %>% 
-  ggplot(aes(x = observed, y = prediction)) +
-  geom_point() +
-  labs(title = "Fastball")
+RMSEs %>% 
+  kable()
 ```
 
