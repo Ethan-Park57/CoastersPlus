@@ -14,6 +14,28 @@ library(Metrics)
 set.seed(840172)
 ```
 
+```{r Mean Impute Function}
+
+mean_impute <- function(x) {
+  mean_value <- mean(x, na.rm = TRUE)
+  x[is.na(x)] <- mean_value
+  return(x)
+}
+
+
+mean_impute_all_columns <- function(data) {
+  for (col in names(data)) {
+    if (is.numeric(data[[col]])) {
+      mean_value <- mean(data[[col]], na.rm = TRUE)
+      data[[col]][is.na(data[[col]])] <- mean_value
+    }
+  }
+  return(data)
+}
+
+```
+
+
 ```{r Original Data, warning = FALSE, message = FALSE}
 arsenals <- read_csv("Updated Data/arsenal_stats.csv") %>% 
   rename(player_name = `last_name, first_name`) %>% 
@@ -47,38 +69,44 @@ xwOBA_ff <- arsenals %>%
 si <- read_csv("Updated Data/SI_interpitch_2020-2023.csv") %>% 
   select(-...1:-player_name) %>% 
 left_join(xwOBA_si, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
-  filter(!is.na(est_woba)) %>%
-  mutate_all(~ifelse(is.na(.), 100, .))
+  filter(!is.na(est_woba)) %>% 
+  mean_impute_all_columns()
+  # mutate_all(~ifelse(is.na(.), 100, .))
 
 sl <- read_csv("Updated Data/SL_interpitch_2020-2023.csv") %>% 
   select(-...1:-player_name) %>% 
 left_join(xwOBA_sl, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
-  filter(!is.na(est_woba)) %>%
-  mutate_all(~ifelse(is.na(.), 100, .))
+  filter(!is.na(est_woba)) %>% 
+  mean_impute_all_columns()
+  # mutate_all(~ifelse(is.na(.), 100, .))
 
 cu <- read_csv("Updated Data/CU_interpitch_2020-2023.csv") %>% 
   select(-...1:-player_name) %>% 
 left_join(xwOBA_cu, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
-  filter(!is.na(est_woba)) %>%
-  mutate_all(~ifelse(is.na(.), 100, .))
+  filter(!is.na(est_woba)) %>% 
+  mean_impute_all_columns()
+  # mutate_all(~ifelse(is.na(.), 100, .))
 
 ch <- read_csv("Updated Data/CH_interpitch_2020-2023.csv") %>% 
   select(-...1:-player_name) %>% 
 left_join(xwOBA_ch, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
-  filter(!is.na(est_woba)) %>%
-  mutate_all(~ifelse(is.na(.), 100, .))
+  filter(!is.na(est_woba)) %>% 
+  mean_impute_all_columns()
+  # mutate_all(~ifelse(is.na(.), 100, .))
 
 fc <- read_csv("Updated Data/FC_interpitch_2020-2023-3.csv") %>% 
   select(-...1:-player_name) %>% 
 left_join(xwOBA_fc, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
-  filter(!is.na(est_woba)) %>%
-  mutate_all(~ifelse(is.na(.), 100, .))
+  filter(!is.na(est_woba)) %>% 
+  mean_impute_all_columns()
+  # mutate_all(~ifelse(is.na(.), 100, .))
 
 ff <- read_csv("Updated Data/FF_interpitch_2020-2023.csv") %>% 
   select(-...1:-player_name) %>% 
 left_join(xwOBA_ff, by = c("mlbAM_ID" = "player_id", "Season" = "Season")) %>% 
-  filter(!is.na(est_woba)) %>%
-  mutate_all(~ifelse(is.na(.), 100, .))
+  filter(!is.na(est_woba)) %>% 
+  mean_impute_all_columns()
+  # mutate_all(~ifelse(is.na(.), 100, .))
 
 ```
 
@@ -220,10 +248,17 @@ rmse_ff <- rmse(FF$observed, FF$prediction)
 ```
 
 ##### RMSEs
-Sinker: `r round(rmse_si, 4)`
+
+Cutter: `r round(rmse_fc, 4)`
 
 
 Slider: `r round(rmse_sl, 4)`
+
+
+Fastball: `r round(rmse_ff, 4)`
+
+
+Sinker: `r round(rmse_si, 4)`
 
 
 Curveball: `r round(rmse_cu, 4)`
@@ -232,10 +267,6 @@ Curveball: `r round(rmse_cu, 4)`
 Change-Up: `r round(rmse_ch, 4)`
 
 
-Cutter: `r round(rmse_cu, 4)`
-
-
-Fastball: `r round(rmse_ff, 4)`
 
 ```{r}
 CU %>% 
