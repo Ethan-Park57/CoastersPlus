@@ -343,9 +343,10 @@ SI <- si_2023 %>%
   mutate(RF1 = predict(si_model, si_2023)$predictions,
          RF2 = predict(si_model_rf2, si_2023)$predictions,
          GAM1 = predict(si_model_gam1, si_2023),
-         GAM2 = predict(si_model_gam2, si_2023)) %>% 
+         GAM2 = predict(si_model_gam2, si_2023),
+         mean = mean(est_woba)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 
 # Slider
@@ -353,9 +354,10 @@ SL <- sl_2023 %>%
   mutate(RF1 = predict(sl_model, sl_2023)$predictions,
          RF2 = predict(sl_model_rf2, sl_2023)$predictions,
          GAM1 = predict(sl_model_gam1, sl_2023),
-         GAM2 = predict(sl_model_gam2, sl_2023)) %>% 
+         GAM2 = predict(sl_model_gam2, sl_2023),
+         mean = mean(est_woba)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 
 # Curveball
@@ -363,9 +365,10 @@ CU <- cu_2023 %>%
   mutate(RF1 = predict(cu_model, cu_2023)$predictions,
          RF2 = predict(cu_model_rf2, cu_2023)$predictions,
          GAM1 = predict(cu_model_gam1, cu_2023),
-         GAM2 = predict(cu_model_gam2, cu_2023)) %>% 
+         GAM2 = predict(cu_model_gam2, cu_2023),
+         mean = mean(est_woba)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 
 # Change-Up
@@ -373,9 +376,10 @@ CH <- ch_2023 %>%
   mutate(RF1 = predict(ch_model, ch_2023)$predictions,
          RF2 = predict(ch_model_rf2, ch_2023)$predictions,
          GAM1 = predict(ch_model_gam1, ch_2023),
-         GAM2 = predict(ch_model_gam2, ch_2023)) %>% 
+         GAM2 = predict(ch_model_gam2, ch_2023),
+         mean = mean(est_woba)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 
 # Cutter
@@ -383,9 +387,10 @@ FC <- fc_2023 %>%
   mutate(RF1 = predict(fc_model, fc_2023)$predictions,
          RF2 = predict(fc_model_rf2, fc_2023)$predictions,
          GAM1 = predict(fc_model_gam1, fc_2023),
-         GAM2 = predict(fc_model_gam2, fc_2023)) %>% 
+         GAM2 = predict(fc_model_gam2, fc_2023),
+         mean = mean(est_woba)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 
 # Fastball
@@ -393,9 +398,10 @@ FF <- ff_2023 %>%
   mutate(RF1 = predict(ff_model, ff_2023)$predictions,
          RF2 = predict(ff_model_rf2, ff_2023)$predictions,
          GAM1 = predict(ff_model_gam1, ff_2023),
-         GAM2 = predict(ff_model_gam2, ff_2023)) %>% 
+         GAM2 = predict(ff_model_gam2, ff_2023),
+         mean = mean(est_woba)) %>% 
   rename(observed = est_woba) %>% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 # RMSEs Inter RF
 rmse_1_si <- rmse(SI$observed, SI$RF1)
@@ -428,6 +434,14 @@ rmse_4_cu <- rmse(CU$observed, CU$GAM2)
 rmse_4_ch <- rmse(CH$observed, CH$GAM2)
 rmse_4_fc <- rmse(FC$observed, FC$GAM2)
 rmse_4_ff <- rmse(FF$observed, FF$GAM2)
+
+# RMSEs Intercept
+rmse_5_si <- rmse(SI$observed, SI$mean)
+rmse_5_sl <- rmse(SL$observed, SL$mean)
+rmse_5_cu <- rmse(CU$observed, CU$mean)
+rmse_5_ch <- rmse(CH$observed, CH$mean)
+rmse_5_fc <- rmse(FC$observed, FC$mean)
+rmse_5_ff <- rmse(FF$observed, FF$mean)
 ```
 
 
@@ -445,7 +459,10 @@ RMSEs <- data.frame("Pitch" = c("Cutter", "Slider", "4-Seam",
                                    rmse_3_si, rmse_3_cu, rmse_3_ch),
                     
                     "Intra GAM" = c(rmse_4_fc, rmse_4_sl, rmse_4_ff,
-                                   rmse_4_si, rmse_4_cu, rmse_4_ch)
+                                   rmse_4_si, rmse_4_cu, rmse_4_ch),
+                    
+                    "Intercept Only" = c(rmse_5_fc, rmse_5_sl, rmse_5_ff,
+                                   rmse_5_si, rmse_5_cu, rmse_5_ch)
                     )
 
 RMSEs %>% 

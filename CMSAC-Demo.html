@@ -742,9 +742,10 @@ SI &lt;- si_2023 %&gt;%
   mutate(RF1 = predict(si_model, si_2023)$predictions,
          RF2 = predict(si_model_rf2, si_2023)$predictions,
          GAM1 = predict(si_model_gam1, si_2023),
-         GAM2 = predict(si_model_gam2, si_2023)) %&gt;% 
+         GAM2 = predict(si_model_gam2, si_2023),
+         mean = mean(est_woba)) %&gt;% 
   rename(observed = est_woba) %&gt;% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 
 # Slider
@@ -752,9 +753,10 @@ SL &lt;- sl_2023 %&gt;%
   mutate(RF1 = predict(sl_model, sl_2023)$predictions,
          RF2 = predict(sl_model_rf2, sl_2023)$predictions,
          GAM1 = predict(sl_model_gam1, sl_2023),
-         GAM2 = predict(sl_model_gam2, sl_2023)) %&gt;% 
+         GAM2 = predict(sl_model_gam2, sl_2023),
+         mean = mean(est_woba)) %&gt;% 
   rename(observed = est_woba) %&gt;% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 
 # Curveball
@@ -762,9 +764,10 @@ CU &lt;- cu_2023 %&gt;%
   mutate(RF1 = predict(cu_model, cu_2023)$predictions,
          RF2 = predict(cu_model_rf2, cu_2023)$predictions,
          GAM1 = predict(cu_model_gam1, cu_2023),
-         GAM2 = predict(cu_model_gam2, cu_2023)) %&gt;% 
+         GAM2 = predict(cu_model_gam2, cu_2023),
+         mean = mean(est_woba)) %&gt;% 
   rename(observed = est_woba) %&gt;% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 
 # Change-Up
@@ -772,9 +775,10 @@ CH &lt;- ch_2023 %&gt;%
   mutate(RF1 = predict(ch_model, ch_2023)$predictions,
          RF2 = predict(ch_model_rf2, ch_2023)$predictions,
          GAM1 = predict(ch_model_gam1, ch_2023),
-         GAM2 = predict(ch_model_gam2, ch_2023)) %&gt;% 
+         GAM2 = predict(ch_model_gam2, ch_2023),
+         mean = mean(est_woba)) %&gt;% 
   rename(observed = est_woba) %&gt;% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 
 # Cutter
@@ -782,9 +786,10 @@ FC &lt;- fc_2023 %&gt;%
   mutate(RF1 = predict(fc_model, fc_2023)$predictions,
          RF2 = predict(fc_model_rf2, fc_2023)$predictions,
          GAM1 = predict(fc_model_gam1, fc_2023),
-         GAM2 = predict(fc_model_gam2, fc_2023)) %&gt;% 
+         GAM2 = predict(fc_model_gam2, fc_2023),
+         mean = mean(est_woba)) %&gt;% 
   rename(observed = est_woba) %&gt;% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 
 # Fastball
@@ -792,9 +797,10 @@ FF &lt;- ff_2023 %&gt;%
   mutate(RF1 = predict(ff_model, ff_2023)$predictions,
          RF2 = predict(ff_model_rf2, ff_2023)$predictions,
          GAM1 = predict(ff_model_gam1, ff_2023),
-         GAM2 = predict(ff_model_gam2, ff_2023)) %&gt;% 
+         GAM2 = predict(ff_model_gam2, ff_2023),
+         mean = mean(est_woba)) %&gt;% 
   rename(observed = est_woba) %&gt;% 
-  select(observed, RF1, RF2, GAM1, GAM2)
+  select(observed, RF1, RF2, GAM1, GAM2, mean)
 
 # RMSEs Inter RF
 rmse_1_si &lt;- rmse(SI$observed, SI$RF1)
@@ -826,7 +832,15 @@ rmse_4_sl &lt;- rmse(SL$observed, SL$GAM2)
 rmse_4_cu &lt;- rmse(CU$observed, CU$GAM2)
 rmse_4_ch &lt;- rmse(CH$observed, CH$GAM2)
 rmse_4_fc &lt;- rmse(FC$observed, FC$GAM2)
-rmse_4_ff &lt;- rmse(FF$observed, FF$GAM2)</code></pre>
+rmse_4_ff &lt;- rmse(FF$observed, FF$GAM2)
+
+# RMSEs Intercept
+rmse_5_si &lt;- rmse(SI$observed, SI$mean)
+rmse_5_sl &lt;- rmse(SL$observed, SL$mean)
+rmse_5_cu &lt;- rmse(CU$observed, CU$mean)
+rmse_5_ch &lt;- rmse(CH$observed, CH$mean)
+rmse_5_fc &lt;- rmse(FC$observed, FC$mean)
+rmse_5_ff &lt;- rmse(FF$observed, FF$mean)</code></pre>
 <pre class="r"><code>RMSEs &lt;- data.frame(&quot;Pitch&quot; = c(&quot;Cutter&quot;, &quot;Slider&quot;, &quot;4-Seam&quot;, 
                                 &quot;Sinker&quot;, &quot;Curveball&quot;, &quot;Change-Up&quot;),
                     
@@ -840,7 +854,10 @@ rmse_4_ff &lt;- rmse(FF$observed, FF$GAM2)</code></pre>
                                    rmse_3_si, rmse_3_cu, rmse_3_ch),
                     
                     &quot;Intra GAM&quot; = c(rmse_4_fc, rmse_4_sl, rmse_4_ff,
-                                   rmse_4_si, rmse_4_cu, rmse_4_ch)
+                                   rmse_4_si, rmse_4_cu, rmse_4_ch),
+                    
+                    &quot;Intercept Only&quot; = c(rmse_5_fc, rmse_5_sl, rmse_5_ff,
+                                   rmse_5_si, rmse_5_cu, rmse_5_ch)
                     )
 
 RMSEs %&gt;% 
@@ -853,6 +870,7 @@ RMSEs %&gt;%
 <th align="right">Intra.RF</th>
 <th align="right">Inter.GAM</th>
 <th align="right">Intra.GAM</th>
+<th align="right">Intercept.Only</th>
 </tr>
 </thead>
 <tbody>
@@ -862,6 +880,7 @@ RMSEs %&gt;%
 <td align="right">0.0508013</td>
 <td align="right">0.1427649</td>
 <td align="right">0.0424488</td>
+<td align="right">0.0445384</td>
 </tr>
 <tr class="even">
 <td align="left">Slider</td>
@@ -869,6 +888,7 @@ RMSEs %&gt;%
 <td align="right">0.0438738</td>
 <td align="right">0.2482697</td>
 <td align="right">0.0424057</td>
+<td align="right">0.0430292</td>
 </tr>
 <tr class="odd">
 <td align="left">4-Seam</td>
@@ -876,6 +896,7 @@ RMSEs %&gt;%
 <td align="right">0.0529912</td>
 <td align="right">0.1307936</td>
 <td align="right">0.0534368</td>
+<td align="right">0.0513582</td>
 </tr>
 <tr class="even">
 <td align="left">Sinker</td>
@@ -883,6 +904,7 @@ RMSEs %&gt;%
 <td align="right">0.0588640</td>
 <td align="right">0.2292064</td>
 <td align="right">0.0540523</td>
+<td align="right">0.0493749</td>
 </tr>
 <tr class="odd">
 <td align="left">Curveball</td>
@@ -890,6 +912,7 @@ RMSEs %&gt;%
 <td align="right">0.0544083</td>
 <td align="right">0.1820861</td>
 <td align="right">0.0634734</td>
+<td align="right">0.0670354</td>
 </tr>
 <tr class="even">
 <td align="left">Change-Up</td>
@@ -897,6 +920,7 @@ RMSEs %&gt;%
 <td align="right">0.0765916</td>
 <td align="right">0.3546191</td>
 <td align="right">0.0703433</td>
+<td align="right">0.0621578</td>
 </tr>
 </tbody>
 </table>
